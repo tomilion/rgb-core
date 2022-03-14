@@ -1,0 +1,28 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`DrawPixelAsset constructor should have valid schema 1`] = `
+Object {
+  "$id": "canvas/drawPixel/asset",
+  "properties": Object {
+    "canvasId": Object {
+      "dataType": "uint32",
+      "fieldNumber": 1,
+    },
+    "colour": Object {
+      "dataType": "uint32",
+      "fieldNumber": 3,
+    },
+    "coords": Object {
+      "dataType": "uint32",
+      "fieldNumber": 2,
+    },
+  },
+  "required": Array [
+    "canvasId",
+    "coords",
+    "colour",
+  ],
+  "title": "DrawPixelAsset transaction asset for Canvas module",
+  "type": "object",
+}
+`;

@@ -1,0 +1,46 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ChangeCanvasAsset constructor should have valid schema 1`] = `
+Object {
+  "$id": "canvas/changeCanvas-asset",
+  "properties": Object {
+    "canvasId": Object {
+      "dataType": "uint32",
+      "fieldNumber": 1,
+    },
+    "costPerPixel": Object {
+      "dataType": "uint64",
+      "fieldNumber": 2,
+    },
+    "endTime": Object {
+      "dataType": "uint64",
+      "fieldNumber": 4,
+    },
+    "height": Object {
+      "dataType": "uint32",
+      "fieldNumber": 6,
+    },
+    "seed": Object {
+      "dataType": "uint64",
+      "fieldNumber": 8,
+    },
+    "startTime": Object {
+      "dataType": "uint64",
+      "fieldNumber": 3,
+    },
+    "timeBetweenDraws": Object {
+      "dataType": "uint32",
+      "fieldNumber": 7,
+    },
+    "width": Object {
+      "dataType": "uint32",
+      "fieldNumber": 5,
+    },
+  },
+  "required": Array [
+    "canvasId",
+  ],
+  "title": "ChangeCanvasAsset transaction asset for canvas module",
+  "type": "object",
+}
+`;

@@ -12,7 +12,7 @@ export class PixelPlugin extends BasePlugin {
 
     public static get info(): PluginInfo {
         return {
-            author: "terence22",
+            author: "tomillion",
             version: "0.1.0.2",
             name: "pixel",
         };

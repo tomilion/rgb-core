@@ -1,8 +1,8 @@
 {
-  "name": "your-place",
+  "name": "rgb-core",
   "version": "0.1.0",
   "description": "Community Driven Canvas",
-  "author": "terence",
+  "author": "tomillion",
   "license": "ISC",
   "keywords": [
     "blockchain",
@@ -14,7 +14,7 @@
   "homepage": "",
   "repository": {},
   "engines": {
-    "node": ">=12.13.0 <=12",
+    "node": ">=12.13.0",
     "npm": ">=6.12.0"
   },
   "main": "dist/index.js",
@@ -33,13 +33,13 @@
     "prepublishOnly": "npm ci && npm run lint && npm run build"
   },
   "bin": {
-    "your-place": "./bin/run"
+    "rgb-core": "./bin/run"
   },
   "lisk": {
     "addressPrefix": "lsk"
   },
   "oclif": {
-    "bin": "your-place",
+    "bin": "rgb-core",
     "commands": "./dist/commands",
     "plugins": [
       "@oclif/plugin-autocomplete",
@@ -47,40 +47,40 @@
     ],
     "topics": {
       "account": {
-        "description": "Commands relating to your-place accounts."
+        "description": "Commands relating to rgb-core accounts."
       },
       "block": {
-        "description": "Commands relating to your-place blocks."
+        "description": "Commands relating to rgb-core blocks."
       },
       "blockchain": {
-        "description": "Commands relating to your-place blockchain data."
+        "description": "Commands relating to rgb-core blockchain data."
       },
       "console": {
-        "description": "your-place interactive REPL session to run commands."
+        "description": "rgb-core interactive REPL session to run commands."
       },
       "config": {
-        "description": "Commands relating to your-place node configuration."
+        "description": "Commands relating to rgb-core node configuration."
       },
       "forger-info": {
-        "description": "Commands relating to your-place forger-info data."
+        "description": "Commands relating to rgb-core forger-info data."
       },
       "forging": {
-        "description": "Commands relating to your-place forging."
+        "description": "Commands relating to rgb-core forging."
       },
       "hash-onion": {
         "description": "Create hash onions to be used by the forger."
       },
       "node": {
-        "description": "Commands relating to your-place node."
+        "description": "Commands relating to rgb-core node."
       },
       "passphrase": {
-        "description": "Commands relating to your-place passphrases."
+        "description": "Commands relating to rgb-core passphrases."
       },
       "sdk": {
         "description": "Commands relating to Lisk SDK development."
       },
       "transaction": {
-        "description": "Commands relating to your-place transactions."
+        "description": "Commands relating to rgb-core transactions."
       }
     }
   },
@@ -98,24 +98,24 @@
     }
   },
   "dependencies": {
-    "@liskhq/lisk-chain": "^0.3.3",
-    "@liskhq/lisk-framework-dashboard-plugin": "^0.1.5",
-    "@liskhq/lisk-framework-faucet-plugin": "^0.1.4",
+    "@liskhq/lisk-chain": "^0.3.4",
+    "@liskhq/lisk-framework-dashboard-plugin": "^0.1.7",
+    "@liskhq/lisk-framework-faucet-plugin": "^0.1.7",
     "@oclif/command": "1.8.0",
     "@oclif/plugin-autocomplete": "0.3.0",
     "@oclif/plugin-help": "3.2.2",
     "axios": "0.21.1",
     "cors": "^2.8.5",
     "dotenv": "^10.0.0",
-    "express": "^4.17.1",
+    "express": "^4.18.1",
     "fs-extra": "9.0.1",
     "inquirer": "7.3.2",
-    "lisk-commander": "^5.1.5",
-    "lisk-framework": "^0.9.0",
-    "lisk-sdk": "^5.1.4",
+    "lisk-commander": "^5.1.10",
+    "lisk-framework": "^0.9.2",
+    "lisk-sdk": "^5.2.2",
     "mersenne-twister": "^1.1.0",
-    "socket.io-client": "^4.4.0",
-    "tar": "6.0.2",
+    "socket.io-client": "^4.5.0",
+    "tar": "^6.0.2",
     "tslib": "1.13.0"
   },
   "devDependencies": {
@@ -129,11 +129,11 @@
     "@typescript-eslint/eslint-plugin": "4.19.0",
     "@typescript-eslint/parser": "4.19.0",
     "eslint": "7.22.0",
-    "eslint-config-lisk-base": "2.0.0",
+    "eslint-config-lisk-base": "^2.0.0",
     "eslint-plugin-import": "2.22.1",
     "eslint-plugin-jest": "24.3.2",
     "globby": "10.0.2",
-    "husky": "4.2.5",
+    "husky": "^4.2.5",
     "jest": "26.6.3",
     "jest-extended": "0.11.5",
     "jest-when": "3.2.1",

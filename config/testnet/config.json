@@ -1,5 +1,5 @@
 {
-    "networkVersion": "0.1",
+    "networkVersion": "3.1",
     "label": "testnet",
     "genesisConfig": {
         "blockTime": 10,

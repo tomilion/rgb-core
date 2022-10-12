@@ -1,0 +1,44 @@
+{
+    "networkVersion": "0.1",
+    "label": "testnet",
+    "genesisConfig": {
+        "blockTime": 10,
+        "communityIdentifier": "RGB",
+        "maxPayloadLength": 15360,
+        "bftThreshold": 68,
+        "minFeePerByte": 1000,
+        "baseFees": [
+            {
+                "moduleID": 5,
+                "assetID": 0,
+                "baseFee": "1000000000"
+            }
+        ],
+        "rewards": {
+            "milestones": ["500000000", "400000000", "300000000", "200000000", "100000000"],
+            "offset": 2160,
+            "distance": 3000000
+        },
+        "minRemainingBalance": "5000000",
+        "activeDelegates": 19,
+        "standbyDelegates": 4
+    },
+    "logger": {
+        "fileLogLevel": "error",
+        "consoleLogLevel": "info"
+    },
+    "network": {
+        "port": 5000,
+        "seedPeers": [
+            {
+                "ip": "testnet-seed-01.rgblisk.io",
+                "port": 5000
+            }
+        ]
+    },
+    "forging": {
+        "waitThreshold": 2,
+        "delegates": []
+    },
+    "plugins": {}
+}

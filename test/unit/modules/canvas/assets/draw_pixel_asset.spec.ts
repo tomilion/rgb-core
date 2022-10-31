@@ -5,21 +5,19 @@ import { when } from "jest-when";
 import { DrawPixelAsset, DrawPixelPayload } from '../../../../../src/app/modules/canvas/assets/draw_pixel_asset';
 import { CanvasModule } from "../../../../../src/app/modules/canvas/canvas_module";
 import { accountSchema, CanvasPayload, canvasSchema, CanvasState, pixelSchema } from "../../../../../src/app/modules/canvas/schemas";
-import { numberBetween, randomAddress, randomCanvas } from "../../../../utils/random_generator";
+import { numberBetween, randomCanvas } from "../../../../utils/random_generator";
 
 describe('DrawPixelAsset', () => {
-    let mockUser: Buffer;
     let mockAsset: DrawPixelPayload;
     let testClass: DrawPixelAsset;
 
     beforeEach(() => {
-        mockUser = randomAddress();
         mockAsset = {
             canvasId: numberBetween(0, 4294967295),
             coords: numberBetween(0, 999999),
             colour: numberBetween(0, 0xFFFFFF),
         };
-        testClass = new DrawPixelAsset(mockUser.toString("hex"));
+        testClass = new DrawPixelAsset();
     });
 
     describe('constructor', () => {

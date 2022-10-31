@@ -35,18 +35,8 @@ export class ChangeCanvasAsset extends BaseAsset<ChangeCanvasPayload> {
         },
     };
 
-    private readonly admin: string;
-
-    public constructor(admin: string) {
-        super();
-        this.admin = admin;
-    }
-
-    public validate({ asset, transaction }: ValidateAssetContext<ChangeCanvasPayload>): void {
-        if (transaction.senderAddress.toString("hex") !== this.admin)
-        {
-            throw new Error("User invalid");
-        }
+    public validate(context: ValidateAssetContext<ChangeCanvasPayload>): void {
+        const { asset } = context;
 
         if ((asset.width !== undefined && asset.width !== null) && (asset.width < 0 || asset.width > 10000))
         {
@@ -81,7 +71,8 @@ export class ChangeCanvasAsset extends BaseAsset<ChangeCanvasPayload> {
         }
     }
 
-    public async apply({ asset, transaction, stateStore }: ApplyAssetContext<ChangeCanvasPayload>): Promise<void> {
+    public async apply(context: ApplyAssetContext<ChangeCanvasPayload>): Promise<void> {
+        const { asset, stateStore, transaction } = context;
         const canvasId = serialiseCanvasId(asset.canvasId);
         const currentCanvas = await stateStore.chain.get(canvasId);
 

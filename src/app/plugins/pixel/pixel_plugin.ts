@@ -3,7 +3,7 @@ import { io } from "socket.io-client";
 import { ActivePayload } from "../../modules/canvas/schemas";
 
 export class PixelPlugin extends BasePlugin {
-    private _channel: BaseChannel = undefined;
+    private _channel: BaseChannel|null = null;
     private _cache: number[][][] = [];
 
     public static get alias(): string {
@@ -36,7 +36,7 @@ export class PixelPlugin extends BasePlugin {
         return {
             getAccountBalance: async (params) => {
                 const address = Buffer.from(params.address, "hex");
-                const account = await this._channel.invoke("app:getAccount", { address: address });
+                const account = await this.getChannel().invoke("app:getAccount", { address: address });
                 return this.codec.decodeAccount(account);
             },
             testService: async () => {
@@ -65,26 +65,26 @@ export class PixelPlugin extends BasePlugin {
     public async load(channel: BaseChannel): Promise<void> {
         this._channel = channel;
 
-        this._channel.subscribe("app:ready", async () => {
+        this.getChannel().subscribe("app:ready", async () => {
             this._logger.debug(null, "Initialising canvas cache");
 
-            const active = await this._channel.invoke<ActivePayload>("canvas:getActiveCanvases");
+            const active = await this.getChannel().invoke<ActivePayload>("canvas:getActiveCanvases");
 
             for (const canvasId of active.canvasIds ?? [])
             {
-                this._cache[canvasId] = await this._channel.invoke("canvas:getPixels", { canvasId });
+                this._cache[canvasId] = await this.getChannel().invoke("canvas:getPixels", { canvasId });
             }
 
             this._logger.debug(null, "Canvas cache initialised");
         });
 
-        this._channel.subscribe("canvas:started", async (data?: Record<string, unknown>) => {
+        this.getChannel().subscribe("canvas:started", async (data?: Record<string, unknown>) => {
             this._logger.debug(data, "Adding canvas to cache");
-            this._cache[data.canvasId] = await this._channel.invoke("canvas:getPixels", { canvasId: data.canvasId });
+            this._cache[data.canvasId] = await this.getChannel().invoke("canvas:getPixels", { canvasId: data.canvasId });
             this._logger.debug(data, "Canvas added to cache");
         });
 
-        this._channel.subscribe("canvas:pixelChanged", async (data?: Record<string, unknown>) => {
+        this.getChannel().subscribe("canvas:pixelChanged", async (data?: Record<string, unknown>) => {
             this._logger.debug(data, "Updating pixel");
             const x = data.coords & 0x0000FFFF;
             const y = (data.coords & 0xFFFF0000) >> 16;
@@ -96,5 +96,15 @@ export class PixelPlugin extends BasePlugin {
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     public async unload(): Promise<void> {
 
+    }
+
+    private getChannel(): BaseChannel
+    {
+        if (this._channel === null)
+        {
+            throw new Error("Channel not loaded");
+        }
+
+        return this._channel;
     }
 }

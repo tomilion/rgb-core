@@ -21,7 +21,7 @@ describe('ChangeCanvasAsset', () => {
             timeBetweenDraws: numberBetween(0, 4294967295),
             seed: BigInt(numberBetween(0, Number.MAX_SAFE_INTEGER)),
         };
-        testClass = new ChangeCanvasAsset(mockUser.toString("hex"));
+        testClass = new ChangeCanvasAsset();
     });
 
     describe('constructor', () => {
@@ -45,14 +45,6 @@ describe('ChangeCanvasAsset', () => {
                 transaction: { senderAddress: mockUser } as any,
             });
             testClass.validate(context);
-        });
-
-        it('should throw for invalid user', () => {
-            const context = testing.createValidateAssetContext({
-                asset: mockAsset,
-                transaction: { senderAddress: Buffer.alloc(0) } as any,
-            });
-            expect(() => testClass.validate(context)).toThrow('User invalid');
         });
 
         it('should throw width below 0', () => {
@@ -172,6 +164,25 @@ describe('ChangeCanvasAsset', () => {
             });
 
             await expect(testClass.apply(context)).rejects.toThrow("Canvas does not exist");
+        });
+
+        it('should throw for invalid user', async () => {
+            chain[`canvas-${mockAsset.canvasId}`] = codec.encode(canvasSchema, randomCanvas({
+                ownerId: account.address,
+                startTime: mockAsset.startTime,
+                state: CanvasState.PENDING,
+            }));
+            const stateStore = new testing.mocks.StateStoreMock({
+                accounts: [account],
+                chain
+            });
+            const context = testing.createApplyAssetContext({
+                stateStore,
+                asset: { canvasId: mockAsset.canvasId },
+                transaction: { senderAddress: randomAddress(), nonce: BigInt(1) } as any,
+            });
+
+            await expect(testClass.apply(context)).rejects.toThrow("User invalid");
         });
 
         it('should throw start time above end time', async () => {

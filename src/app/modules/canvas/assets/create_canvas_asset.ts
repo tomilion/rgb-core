@@ -35,19 +35,8 @@ export class CreateCanvasAsset extends BaseAsset<CreateCanvasPayload> {
         },
     };
 
-    private readonly admin: string;
-
-    public constructor(admin: string) {
-        super();
-        this.admin = admin;
-    }
-
-    public validate({ asset, transaction }: ValidateAssetContext<CreateCanvasPayload>): void {
-        if (transaction.senderAddress.toString("hex") !== this.admin)
-        {
-            // throw new Error("User invalid");
-            throw new Error(`User invalid (${this.admin}) (${transaction.senderAddress.toString("hex")})`);
-        }
+    public validate(context: ValidateAssetContext<CreateCanvasPayload>): void {
+        const { asset } = context;
 
         if (asset.width < 0 || asset.width > 10000)
         {
@@ -87,7 +76,15 @@ export class CreateCanvasAsset extends BaseAsset<CreateCanvasPayload> {
         }
     }
 
-    public async apply({ asset, transaction, stateStore }: ApplyAssetContext<CreateCanvasPayload>): Promise<void> {
+    public async apply(context: ApplyAssetContext<CreateCanvasPayload>): Promise<void> {
+        const { asset, stateStore, reducerHandler, transaction } = context;
+        const adminAddress = await reducerHandler.invoke<Buffer>("canvas:getAdminAddress");
+
+        if (transaction.senderAddress.compare(adminAddress) !== 0)
+        {
+            throw new Error("User invalid");
+        }
+
         const canvasId = serialiseCanvasId(asset.canvasId);
         const currentCanvas = await stateStore.chain.get(canvasId);
 

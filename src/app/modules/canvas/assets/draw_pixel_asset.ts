@@ -27,14 +27,9 @@ export class DrawPixelAsset extends BaseAsset<DrawPixelPayload> {
     public id = DrawPixelAsset.ASSET_ID;
     public schema = drawPixelSchema;
 
-    private readonly wallet: string;
+    public validate(context: ValidateAssetContext<DrawPixelPayload>): void {
+        const { asset } = context;
 
-    public constructor(wallet: string) {
-        super();
-        this.wallet = wallet;
-    }
-
-    public validate({ asset }: ValidateAssetContext<DrawPixelPayload>): void {
         // Sanity check that coords are within 10000 x 10000 grid
         if (asset.coords < 0 || asset.coords >= 100000000)
         {
@@ -48,7 +43,8 @@ export class DrawPixelAsset extends BaseAsset<DrawPixelPayload> {
         }
     }
 
-    public async apply({ asset, transaction, stateStore, reducerHandler }: ApplyAssetContext<DrawPixelPayload>): Promise<void> {
+    public async apply(context: ApplyAssetContext<DrawPixelPayload>): Promise<void> {
+        const { asset, transaction, stateStore, reducerHandler } = context;
         const canvasId = serialiseCanvasId(asset.canvasId);
         const canvasBuffer = await stateStore.chain.get(canvasId);
 
@@ -84,13 +80,15 @@ export class DrawPixelAsset extends BaseAsset<DrawPixelPayload> {
             throw Error("Too many draws");
         }
 
+        const walletAddress = await reducerHandler.invoke<Buffer>("canvas:getWalletAddress");
+
         await reducerHandler.invoke("token:debit", {
             address: transaction.senderAddress,
             amount: canvas.costPerPixel,
         });
 
         await reducerHandler.invoke("token:credit", {
-            address: Buffer.from(this.wallet, "hex"),
+            address: walletAddress,
             amount: canvas.costPerPixel,
         });
 

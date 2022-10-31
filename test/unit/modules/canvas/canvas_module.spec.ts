@@ -205,6 +205,11 @@ describe('CanvasModuleModule', () => {
             });
             const setMock = jest.spyOn(stateStore.chain, 'set');
 
+            testClass.init({
+                channel: testing.mocks.channelMock,
+                logger: testing.mocks.loggerMock,
+                dataAccess: new testing.mocks.DataAccessMock(),
+            });
             await testClass.afterBlockApply(context);
 
             expect(setMock).toHaveBeenCalledWith(
@@ -269,6 +274,11 @@ describe('CanvasModuleModule', () => {
             });
             const setMock = jest.spyOn(stateStore.chain, 'set');
 
+            testClass.init({
+                channel: testing.mocks.channelMock,
+                logger: testing.mocks.loggerMock,
+                dataAccess: new testing.mocks.DataAccessMock(),
+            });
             await testClass.afterBlockApply(context);
 
             expect(setMock).toHaveBeenCalledWith(

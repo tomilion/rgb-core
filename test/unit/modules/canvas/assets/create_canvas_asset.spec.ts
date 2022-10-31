@@ -3,14 +3,14 @@ import { CreateCanvasAsset, CreateCanvasPayload } from '../../../../../src/app/m
 import { CanvasModule } from "../../../../../src/app/modules/canvas/canvas_module";
 import { canvasSchema, pendingSchema } from "../../../../../src/app/modules/canvas/schemas";
 import { now, numberBetween, randomAddress } from "../../../../utils/random_generator";
+import { ReducerHandler } from "lisk-framework/dist-node/types";
+import { when } from "jest-when";
 
 describe('CreateCanvasAsset', () => {
-    let mockUser: Buffer;
     let mockAsset: CreateCanvasPayload;
     let testClass: CreateCanvasAsset;
 
     beforeEach(() => {
-        mockUser = randomAddress();
         mockAsset = {
             canvasId: numberBetween(0, 4294967295),
             costPerPixel: BigInt(numberBetween(0, 4294967295)),
@@ -21,7 +21,7 @@ describe('CreateCanvasAsset', () => {
             timeBetweenDraws: numberBetween(0, 4294967295),
             seed: BigInt(numberBetween(0, Number.MAX_SAFE_INTEGER)),
         };
-        testClass = new CreateCanvasAsset(mockUser.toString("hex"));
+        testClass = new CreateCanvasAsset();
     });
 
     describe('constructor', () => {
@@ -42,23 +42,15 @@ describe('CreateCanvasAsset', () => {
         it('should pass with valid args', () => {
             const context = testing.createValidateAssetContext({
                 asset: mockAsset,
-                transaction: { senderAddress: mockUser } as any,
+                transaction: { } as any,
             });
             testClass.validate(context);
-        });
-
-        it('should throw for invalid user', () => {
-            const context = testing.createValidateAssetContext({
-                asset: mockAsset,
-                transaction: { senderAddress: randomAddress() } as any,
-            });
-            expect(() => testClass.validate(context)).toThrow('User invalid');
         });
 
         it('should throw width below 0', () => {
             const context = testing.createValidateAssetContext({
                 asset: { ...mockAsset, width: -1},
-                transaction: { senderAddress: mockUser } as any,
+                transaction: { } as any,
             });
             expect(() => testClass.validate(context)).toThrow('Width invalid');
         });
@@ -66,7 +58,7 @@ describe('CreateCanvasAsset', () => {
         it('should throw width above 10000', () => {
             const context = testing.createValidateAssetContext({
                 asset: { ...mockAsset, width: 10001},
-                transaction: { senderAddress: mockUser } as any,
+                transaction: { } as any,
             });
             expect(() => testClass.validate(context)).toThrow('Width invalid');
         });
@@ -74,7 +66,7 @@ describe('CreateCanvasAsset', () => {
         it('should throw height below 0', () => {
             const context = testing.createValidateAssetContext({
                 asset: { ...mockAsset, height: -1},
-                transaction: { senderAddress: mockUser } as any,
+                transaction: { } as any,
             });
             expect(() => testClass.validate(context)).toThrow('Height invalid');
         });
@@ -82,7 +74,7 @@ describe('CreateCanvasAsset', () => {
         it('should throw height above 10000', () => {
             const context = testing.createValidateAssetContext({
                 asset: { ...mockAsset, height: 10001},
-                transaction: { senderAddress: mockUser } as any,
+                transaction: { } as any,
             });
             expect(() => testClass.validate(context)).toThrow('Height invalid');
         });
@@ -90,7 +82,7 @@ describe('CreateCanvasAsset', () => {
         it('should throw cost per pixel below 0', () => {
             const context = testing.createValidateAssetContext({
                 asset: { ...mockAsset, costPerPixel: BigInt(-1)},
-                transaction: { senderAddress: mockUser } as any,
+                transaction: { } as any,
             });
             expect(() => testClass.validate(context)).toThrow('Cost per pixel invalid');
         });
@@ -98,7 +90,7 @@ describe('CreateCanvasAsset', () => {
         it('should throw seed below 0', () => {
             const context = testing.createValidateAssetContext({
                 asset: { ...mockAsset, seed: BigInt(-1)},
-                transaction: { senderAddress: mockUser } as any,
+                transaction: { } as any,
             });
             expect(() => testClass.validate(context)).toThrow('Seed invalid');
         });
@@ -106,7 +98,7 @@ describe('CreateCanvasAsset', () => {
         it('should throw start time in past', () => {
             const context = testing.createValidateAssetContext({
                 asset: { ...mockAsset, startTime: now() - BigInt(1), endTime: now() + BigInt(10000)},
-                transaction: { senderAddress: mockUser } as any,
+                transaction: { } as any,
             });
             expect(() => testClass.validate(context)).toThrow('Start time cannot be in the past');
         });
@@ -114,7 +106,7 @@ describe('CreateCanvasAsset', () => {
         it('should throw end time in past', () => {
             const context = testing.createValidateAssetContext({
                 asset: { ...mockAsset, startTime: now() + BigInt(10000), endTime: now() - BigInt(1)},
-                transaction: { senderAddress: mockUser } as any,
+                transaction: { } as any,
             });
             expect(() => testClass.validate(context)).toThrow('End time cannot be in the past');
         });
@@ -122,7 +114,7 @@ describe('CreateCanvasAsset', () => {
         it('should throw start time above end time', () => {
             const context = testing.createValidateAssetContext({
                 asset: { ...mockAsset, startTime: now() + BigInt(10001), endTime: now() + BigInt(10000)},
-                transaction: { senderAddress: mockUser } as any,
+                transaction: { } as any,
             });
             expect(() => testClass.validate(context)).toThrow('End time must be greater than start time');
         });
@@ -131,10 +123,30 @@ describe('CreateCanvasAsset', () => {
     describe('apply', () => {
         let account: any;
         let chain: any;
+        let reducerHandler: ReducerHandler;
 
         beforeEach(() => {
             account = testing.fixtures.createDefaultAccount([CanvasModule]);
             chain = {};
+            reducerHandler = testing.mocks.reducerHandlerMock;
+        });
+
+        it('should throw for invalid user', async () => {
+            const stateStore = new testing.mocks.StateStoreMock({
+                accounts: [account]
+            });
+            const context = testing.createApplyAssetContext({
+                stateStore,
+                asset: mockAsset,
+                reducerHandler,
+                transaction: { senderAddress: randomAddress(), nonce: BigInt(1) } as any,
+            });
+
+            const invokeMock = jest.spyOn(reducerHandler, 'invoke');
+
+            when(invokeMock).calledWith("canvas:getAdminAddress").mockResolvedValue(randomAddress());
+
+            await expect(testClass.apply(context)).rejects.toThrow("User invalid");
         });
 
         it('should save canvas to state store', async () => {
@@ -147,6 +159,10 @@ describe('CreateCanvasAsset', () => {
                 transaction: { senderAddress: account.address, nonce: BigInt(1) } as any,
             });
             jest.spyOn(stateStore.chain, 'set');
+
+            const invokeMock = jest.spyOn(reducerHandler, 'invoke');
+
+            when(invokeMock).calledWith("canvas:getAdminAddress").mockResolvedValue(account.address);
 
             await testClass.apply(context);
 
@@ -186,6 +202,10 @@ describe('CreateCanvasAsset', () => {
                 transaction: { senderAddress: account.address, nonce: BigInt(1) } as any,
             });
             jest.spyOn(stateStore.chain, 'set');
+
+            const invokeMock = jest.spyOn(reducerHandler, 'invoke');
+
+            when(invokeMock).calledWith("canvas:getAdminAddress").mockResolvedValue(account.address);
 
             await testClass.apply(context);
 
@@ -230,6 +250,10 @@ describe('CreateCanvasAsset', () => {
                 asset: mockAsset,
                 transaction: { senderAddress: account.address, nonce: BigInt(1) } as any,
             });
+
+            const invokeMock = jest.spyOn(reducerHandler, 'invoke');
+
+            when(invokeMock).calledWith("canvas:getAdminAddress").mockResolvedValue(account.address);
 
             await expect(testClass.apply(context)).rejects.toThrow("Canvas already exists");
         });

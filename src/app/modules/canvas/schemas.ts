@@ -99,3 +99,26 @@ export const completeSchema = {
         canvasIds: { fieldNumber: 1, type: "array", items: { dataType: 'uint32' } },
     },
 };
+
+export interface AddressPayload {
+    address: Buffer;
+}
+
+export const addressSchema = {
+    $id: "canvas/address",
+    type: "object",
+    required: ["address"],
+    properties: {
+        address: { fieldNumber: 1, dataType: "bytes", minLength: 20, maxLength: 20 },
+    },
+};
+
+export interface CanvasAccount {
+    canvas: { accountType: string }
+}
+
+export enum AccountType {
+    Admin = "ADMIN",
+    Wallet = "WALLET",
+    Default = "DEFAULT",
+}

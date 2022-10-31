@@ -4,13 +4,26 @@ import { ChangeCanvasAsset } from "./assets/change_canvas_asset";
 import { CreateCanvasAsset } from "./assets/create_canvas_asset";
 import { DrawPixelAsset, DrawPixelPayload, drawPixelSchema } from "./assets/draw_pixel_asset";
 import { serialiseCanvasId, serialisePixelId } from "./utils";
-import { ActivePayload, activeSchema, CanvasPayload, canvasSchema, CanvasState, CompletePayload, completeSchema, PendingPayload, pendingSchema, PixelPayload, pixelSchema } from "./schemas";
+import { AccountType, ActivePayload, activeSchema, AddressPayload, addressSchema, CanvasAccount, CanvasPayload, canvasSchema, CanvasState, CompletePayload, completeSchema, PendingPayload, pendingSchema, PixelPayload, pixelSchema } from "./schemas";
 
 export class CanvasModule extends BaseModule {
     public static readonly MODULE_ID = 1000;
 
     public name = "canvas";
     public id = CanvasModule.MODULE_ID;
+    public accountSchema = {
+        type: "object",
+        properties: {
+            accountType: {
+                fieldNumber: 1,
+                dataType: "string",
+                maxLength: 64,
+            },
+        },
+        default: {
+            accountType: AccountType.Default.toString(),
+        },
+    };
     public actions = {
         getCanvas: async (params: Record<string, unknown>) => this.getCanvas(params),
         getPendingCanvases: async () => this.getPendingCanvases(),
@@ -20,11 +33,13 @@ export class CanvasModule extends BaseModule {
     };
     public reducers = {
         getLastBlockHeight: async () => this.getLastBlockHeight(),
+        getWalletAddress: async () => this.getWalletAddress(),
+        getAdminAddress: async () => this.getAdminAddress(),
     };
     public transactionAssets = [
-        new CreateCanvasAsset(process.env.CANVAS_ADMIN_ADDRESS ?? ''),
-        new ChangeCanvasAsset(process.env.CANVAS_ADMIN_ADDRESS ?? ''),
-        new DrawPixelAsset(process.env.CANVAS_WALLET_ADDRESS ?? ''),
+        new CreateCanvasAsset(),
+        new ChangeCanvasAsset(),
+        new DrawPixelAsset(),
     ];
     public events = ["started", "completed", "pixelChanged"];
 
@@ -112,9 +127,22 @@ export class CanvasModule extends BaseModule {
         }
     }
 
-    public async afterGenesisBlockApply(_input: AfterGenesisBlockApplyContext) {
-        // Get any data from genesis block, for example get all genesis accounts
-        // const genesisAccounts = genesisBlock.header.asset.accounts;
+    public async afterGenesisBlockApply(_input: AfterGenesisBlockApplyContext<CanvasAccount>): Promise<void> {
+        const accounts = _input.genesisBlock.header.asset.accounts;
+        assert(accounts.length > 0);
+
+        for (const account of accounts)
+        {
+            if (account.canvas.accountType == AccountType.Admin.toString())
+            {
+                await _input.stateStore.chain.set("canvas:adminAddress", codec.encode(addressSchema, { address: account.address }));
+            }
+
+            if (account.canvas.accountType == AccountType.Wallet.toString())
+            {
+                await _input.stateStore.chain.set("canvas:walletAddress", codec.encode(addressSchema, { address: account.address }));
+            }
+        }
     }
 
     private async getCanvas(params: Record<string, unknown>) {
@@ -208,8 +236,32 @@ export class CanvasModule extends BaseModule {
         return pixels;
     };
 
-    private async getLastBlockHeight() {
+    private async getLastBlockHeight(): Promise<number> {
         const header = await this._dataAccess.getLastBlockHeader();
         return header.height;
+    }
+
+    private async getWalletAddress(): Promise<Buffer|null> {
+        const walletBuffer: Buffer|undefined = await this._dataAccess.getChainState("canvas:walletAddress");
+
+        if (walletBuffer === undefined)
+        {
+            return null;
+        }
+
+        const wallet = codec.decode<AddressPayload>(addressSchema, walletBuffer);
+        return wallet.address;
+    }
+
+    private async getAdminAddress(): Promise<Buffer|null> {
+        const adminBuffer: Buffer|undefined = await this._dataAccess.getChainState("canvas:adminAddress");
+
+        if (adminBuffer === undefined)
+        {
+            return null;
+        }
+
+        const admin = codec.decode<AddressPayload>(addressSchema, adminBuffer);
+        return admin.address;
     }
 }

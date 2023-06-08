@@ -5,12 +5,11 @@ import { CanvasPayload, canvasSchema, CanvasState } from "../schemas";
 export interface ChangeCanvasPayload {
     canvasId: number;
     costPerPixel?: bigint | null;
-    startTime?: bigint | null;
-    endTime?: bigint | null;
+    startBlockHeight?: bigint | null;
+    endBlockHeight?: bigint | null;
     width?: number | null;
     height?: number | null;
     timeBetweenDraws?: number | null;
-    seed?: bigint | null;
 }
 
 export class ChangeCanvasAsset extends BaseAsset<ChangeCanvasPayload> {
@@ -26,17 +25,16 @@ export class ChangeCanvasAsset extends BaseAsset<ChangeCanvasPayload> {
         properties: {
             canvasId: { fieldNumber: 1, dataType: "uint32" },
             costPerPixel: { fieldNumber: 2, dataType: "uint64" },
-            startTime: { fieldNumber: 3, dataType: "uint64" },
-            endTime: { fieldNumber: 4, dataType: "uint64" },
+            startBlockHeight: { fieldNumber: 3, dataType: "uint64" },
+            endBlockHeight: { fieldNumber: 4, dataType: "uint64" },
             width: { fieldNumber: 5, dataType: "uint32" },
             height: { fieldNumber: 6, dataType: "uint32" },
             timeBetweenDraws: { fieldNumber: 7, dataType: "uint32" },
-            seed: { fieldNumber: 8, dataType: "uint64" },
         },
     };
 
     public validate(context: ValidateAssetContext<ChangeCanvasPayload>): void {
-        const { asset } = context;
+        const { asset, header } = context;
 
         if ((asset.width !== undefined && asset.width !== null) && (asset.width < 0 || asset.width > 10000))
         {
@@ -53,21 +51,30 @@ export class ChangeCanvasAsset extends BaseAsset<ChangeCanvasPayload> {
             throw new Error("Cost per pixel invalid");
         }
 
-        if ((asset.seed !== undefined && asset.seed !== null) && (asset.seed < 0))
+        // Checking undefined/null inline because storing condition in variable is too complex for linter ...
+        if (asset.startBlockHeight !== undefined &&
+            asset.startBlockHeight !== null &&
+            asset.startBlockHeight < header.height)
         {
-            throw new Error("Seed invalid");
+            throw new Error("Start block height cannot be in the past");
         }
 
-        const now = BigInt(Math.floor(Date.now() / 1000));
-
-        if ((asset.startTime !== undefined && asset.startTime !== null) && (asset.startTime < now))
+        // Checking undefined/null inline because storing condition in variable is too complex for linter ...
+        if (asset.endBlockHeight !== undefined &&
+            asset.endBlockHeight !== null &&
+            asset.endBlockHeight < header.height)
         {
-            throw new Error("Start time cannot be in the past");
+            throw new Error("End block height cannot be in the past");
         }
 
-        if ((asset.endTime !== undefined && asset.endTime !== null) && (asset.endTime < now))
+        // Checking undefined/null inline because storing condition in variable is too complex for linter ...
+        if (asset.startBlockHeight !== undefined &&
+            asset.startBlockHeight !== null &&
+            asset.endBlockHeight !== undefined &&
+            asset.endBlockHeight !== null &&
+            asset.endBlockHeight < asset.startBlockHeight)
         {
-            throw new Error("End time cannot be in the past");
+            throw new Error("End block height must be greater than start block height");
         }
     }
 
@@ -88,29 +95,34 @@ export class ChangeCanvasAsset extends BaseAsset<ChangeCanvasPayload> {
             throw new Error("User invalid");
         }
 
-        const now = BigInt(Math.floor(Date.now() / 1000));
-
-        if (canvas.endTime < now || canvas.state === CanvasState.COMPLETE)
+        if (canvas.state === CanvasState.COMPLETE)
         {
-            throw new Error("Canvas already ended");
+            throw new Error("Canvas already completed");
         }
 
-        if (canvas.startTime < now || canvas.state === CanvasState.ACTIVE)
+        if (canvas.state === CanvasState.ACTIVE)
         {
-            throw new Error("Canvas already started");
+            if (asset.startBlockHeight !== null && asset.startBlockHeight !== undefined)
+            {
+                throw new Error("Cannot modify start block height on active canvas");
+            }
+
+            if (asset.endBlockHeight !== null && asset.endBlockHeight !== undefined)
+            {
+                throw new Error("Cannot modify end block height on active canvas");
+            }
         }
 
         canvas.width = asset.width ?? canvas.width;
         canvas.height = asset.height ?? canvas.height;
         canvas.costPerPixel = asset.costPerPixel ?? canvas.costPerPixel;
-        canvas.startTime = asset.startTime ?? canvas.startTime;
-        canvas.endTime = asset.endTime ?? canvas.endTime;
+        canvas.startBlockHeight = asset.startBlockHeight ?? canvas.startBlockHeight;
+        canvas.endBlockHeight = asset.endBlockHeight ?? canvas.endBlockHeight;
         canvas.timeBetweenDraws = asset.timeBetweenDraws ?? canvas.timeBetweenDraws;
-        canvas.seed = asset.seed ?? canvas.seed;
 
-        if (canvas.startTime > canvas.endTime)
+        if (canvas.startBlockHeight > canvas.endBlockHeight)
         {
-            throw new Error("End time must be greater than start time");
+            throw new Error("End block height must be greater than start block height");
         }
 
         await stateStore.chain.set(canvasId, codec.encode(canvasSchema, canvas));

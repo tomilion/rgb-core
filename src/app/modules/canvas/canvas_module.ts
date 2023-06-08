@@ -41,7 +41,7 @@ export class CanvasModule extends BaseModule {
         new ChangeCanvasAsset(),
         new DrawPixelAsset(),
     ];
-    public events = ["started", "completed", "pixelChanged"];
+    public events = ["started", "completed", "pixelChangeSubmitted", "pixelChangeCommitted"];
 
     // Lifecycle hooks
     public async beforeBlockApply(_input: BeforeBlockApplyContext) {
@@ -51,8 +51,6 @@ export class CanvasModule extends BaseModule {
     }
 
     public async afterBlockApply(context: AfterBlockApplyContext) {
-        const now = BigInt(Math.floor(Date.now() / 1000));
-
         const pendingToCommit: number[] = [];
         const activeToCommit: number[] = [];
 
@@ -73,7 +71,7 @@ export class CanvasModule extends BaseModule {
             assert(canvas.state === CanvasState.PENDING);
 
             // Automatically starting canvas after passing start time
-            if (canvas.startTime <= now)
+            if (canvas.startBlockHeight <= context.block.header.height)
             {
                 canvas.state = CanvasState.ACTIVE;
                 await context.stateStore.chain.set(serialiseCanvasId(canvasId), codec.encode(canvasSchema, canvas));
@@ -85,6 +83,20 @@ export class CanvasModule extends BaseModule {
             pendingToCommit.push(canvasId);
         }
 
+        for (const transaction of context.block.payload)
+        {
+            if (transaction.moduleID === CanvasModule.MODULE_ID &&
+                transaction.assetID === DrawPixelAsset.ASSET_ID)
+            {
+                const pixel = codec.decode<DrawPixelPayload>(drawPixelSchema, transaction.asset);
+                this._channel.publish("canvas:pixelChangeCommitted", {
+                    address: transaction.senderAddress.toString("hex"),
+                    transactionId: transaction.id.toString("hex"),
+                    pixel: pixel,
+                });
+            }
+        }
+
         for (const canvasId of active.canvasIds)
         {
             const canvasBuffer = await context.stateStore.chain.get(serialiseCanvasId(canvasId));
@@ -93,7 +105,7 @@ export class CanvasModule extends BaseModule {
             assert(canvas.state === CanvasState.ACTIVE);
 
             // Automatically ending canvas after passing end time
-            if (canvas.endTime <= now)
+            if (canvas.endBlockHeight <= context.block.header.height)
             {
                 canvas.state = CanvasState.COMPLETE;
                 await context.stateStore.chain.set(serialiseCanvasId(canvasId), codec.encode(canvasSchema, canvas));
@@ -120,9 +132,10 @@ export class CanvasModule extends BaseModule {
             _input.transaction.assetID === DrawPixelAsset.ASSET_ID)
         {
             const pixel = codec.decode<DrawPixelPayload>(drawPixelSchema, _input.transaction.asset);
-            this._channel.publish("canvas:pixelChanged", {
-                ownerId: _input.transaction.senderAddress.toString("hex"),
-                ...pixel,
+            this._channel.publish("canvas:pixelChangeSubmitted", {
+                address: _input.transaction.senderAddress.toString("hex"),
+                transactionId: _input.transaction.id.toString("hex"),
+                pixel: pixel,
             });
         }
     }
@@ -159,9 +172,8 @@ export class CanvasModule extends BaseModule {
             ...canvas,
             ownerId: canvas.ownerId.toString("hex"),
             costPerPixel: Number(canvas.costPerPixel),
-            startTime: Number(canvas.startTime),
-            endTime: Number(canvas.endTime),
-            seed: Number(canvas.seed),
+            startBlockHeight: Number(canvas.startBlockHeight),
+            endBlockHeight: Number(canvas.endBlockHeight),
         };
     }
 

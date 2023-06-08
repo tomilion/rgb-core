@@ -1,35 +1,35 @@
 import { codec, testing } from "lisk-sdk";
 import { Account } from "@liskhq/lisk-chain/dist-node/types";
-import { CanvasModule } from '../../../../src/app/modules/canvas/canvas_module';
+import { CanvasModule } from "../../../../src/app/modules/canvas/canvas_module";
 import { ActivePayload, activeSchema, canvasSchema, CanvasState, CompletePayload, completeSchema, PendingPayload, pendingSchema, pixelSchema } from "../../../../src/app/modules/canvas/schemas";
-import { now, numberBetween, randomAddress, randomBlock, randomCanvas } from "../../../utils/random_generator";
+import { numberBetween, randomAddress, randomBlock, randomCanvas } from "../../../utils/random_generator";
 
-describe('CanvasModuleModule', () => {
+describe("CanvasModuleModule", () => {
     let testClass: CanvasModule;
 
     beforeEach(() => {
         testClass = new CanvasModule(testing.fixtures.defaultConfig.genesisConfig);
     });
 
-    describe('constructor', () => {
-        it('should have valid id', () => {
+    describe("constructor", () => {
+        it("should have valid id", () => {
             expect(testClass.id).toEqual(1000);
         });
 
-        it('should have valid name', () => {
-            expect(testClass.name).toEqual('canvas');
+        it("should have valid name", () => {
+            expect(testClass.name).toEqual("canvas");
         });
     });
 
-    describe('actions', () => {
+    describe("actions", () => {
         let chain: any;
 
         beforeEach(() => {
             chain = {};
         });
 
-        describe('getCanvas', () => {
-            it('should return canvas', async () => {
+        describe("getCanvas", () => {
+            it("should return canvas", async () => {
                 const canvasId = numberBetween(0, 4294967295);
                 const canvas = randomCanvas();
 
@@ -47,14 +47,13 @@ describe('CanvasModuleModule', () => {
                     ...canvas,
                     ownerId: canvas.ownerId.toString("hex"),
                     costPerPixel: Number(canvas.costPerPixel),
-                    startTime: Number(canvas.startTime),
-                    endTime: Number(canvas.endTime),
-                    seed: Number(canvas.seed),
+                    startBlockHeight: Number(canvas.startBlockHeight),
+                    endBlockHeight: Number(canvas.endBlockHeight),
                 };
                 expect(result).toEqual(expected);
             });
 
-            it('should return nothing if no canvas with id', async () => {
+            it("should return nothing if no canvas with id", async () => {
                 const canvasId = numberBetween(0, 4294967295);
                 const canvas = randomCanvas();
 
@@ -72,8 +71,8 @@ describe('CanvasModuleModule', () => {
             });
         });
 
-        describe('getPixels', () => {
-            it('should return pixels', async () => {
+        describe("getPixels", () => {
+            it("should return pixels", async () => {
                 const canvasId = numberBetween(0, 4294967295);
                 const canvas = randomCanvas({ width: 100, height: 50 });
                 const expected: number[][] = Array.from(Array(canvas.height), () => []);
@@ -101,7 +100,7 @@ describe('CanvasModuleModule', () => {
                 expect(result).toEqual(expected);
             });
 
-            it('should default pixels to white if not defined', async () => {
+            it("should default pixels to white if not defined", async () => {
                 const canvasId = numberBetween(0, 4294967295);
                 const canvas = randomCanvas({ width: 100, height: 50 });
 
@@ -119,7 +118,7 @@ describe('CanvasModuleModule', () => {
                 expect(result).toEqual(expected);
             });
 
-            it('should return nothing if no canvas with id', async () => {
+            it("should return nothing if no canvas with id", async () => {
                 const canvasId = numberBetween(0, 4294967295);
                 const canvas = randomCanvas();
 
@@ -138,7 +137,7 @@ describe('CanvasModuleModule', () => {
         });
     });
 
-    describe('afterBlockApply', () => {
+    describe("afterBlockApply", () => {
         let account: Account;
         let chain: any;
         let pending: PendingPayload;
@@ -165,15 +164,15 @@ describe('CanvasModuleModule', () => {
             ] };
         });
 
-        it('should move pending to active if passed start time', async () => {
+        it("should move pending to active if passed start time", async () => {
             const canvases = [
-                randomCanvas({ startTime: now() - BigInt(1), state: CanvasState.PENDING }),
-                randomCanvas({ startTime: now() - BigInt(1), state: CanvasState.PENDING }),
-                randomCanvas({ state: CanvasState.PENDING }),
+                randomCanvas({ startBlockHeight: BigInt(150), endBlockHeight: BigInt(250), state: CanvasState.PENDING }),
+                randomCanvas({ startBlockHeight: BigInt(150), endBlockHeight: BigInt(250), state: CanvasState.PENDING }),
+                randomCanvas({ startBlockHeight: BigInt(151), endBlockHeight: BigInt(250), state: CanvasState.PENDING }),
 
-                randomCanvas({ state: CanvasState.ACTIVE }),
-                randomCanvas({ state: CanvasState.ACTIVE }),
-                randomCanvas({ state: CanvasState.ACTIVE }),
+                randomCanvas({ startBlockHeight: BigInt(100), endBlockHeight: BigInt(151), state: CanvasState.ACTIVE }),
+                randomCanvas({ startBlockHeight: BigInt(100), endBlockHeight: BigInt(151), state: CanvasState.ACTIVE }),
+                randomCanvas({ startBlockHeight: BigInt(100), endBlockHeight: BigInt(151), state: CanvasState.ACTIVE }),
 
                 randomCanvas({ state: CanvasState.COMPLETE }),
                 randomCanvas({ state: CanvasState.COMPLETE }),
@@ -200,10 +199,10 @@ describe('CanvasModuleModule', () => {
                 chain
             });
             const context = testing.createAfterBlockApplyContext({
-                block: randomBlock(),
+                block: randomBlock({ height: 150 }),
                 stateStore
             });
-            const setMock = jest.spyOn(stateStore.chain, 'set');
+            const setMock = jest.spyOn(stateStore.chain, "set");
 
             testClass.init({
                 channel: testing.mocks.channelMock,
@@ -234,15 +233,15 @@ describe('CanvasModuleModule', () => {
             );
         });
 
-        it('should move active to completed if passed end time', async () => {
+        it("should move active to completed if passed end block height", async () => {
             const canvases = [
-                randomCanvas({ state: CanvasState.PENDING }),
-                randomCanvas({ state: CanvasState.PENDING }),
-                randomCanvas({ state: CanvasState.PENDING }),
+                randomCanvas({ startBlockHeight: BigInt(151), endBlockHeight: BigInt(250), state: CanvasState.PENDING }),
+                randomCanvas({ startBlockHeight: BigInt(151), endBlockHeight: BigInt(250), state: CanvasState.PENDING }),
+                randomCanvas({ startBlockHeight: BigInt(151), endBlockHeight: BigInt(250), state: CanvasState.PENDING }),
 
-                randomCanvas({ endTime: now() - BigInt(1), state: CanvasState.ACTIVE }),
-                randomCanvas({ endTime: now() - BigInt(1), state: CanvasState.ACTIVE }),
-                randomCanvas({ state: CanvasState.ACTIVE }),
+                randomCanvas({ startBlockHeight: BigInt(50), endBlockHeight: BigInt(150), state: CanvasState.ACTIVE }),
+                randomCanvas({ startBlockHeight: BigInt(50), endBlockHeight: BigInt(150), state: CanvasState.ACTIVE }),
+                randomCanvas({ startBlockHeight: BigInt(50), endBlockHeight: BigInt(151), state: CanvasState.ACTIVE }),
 
                 randomCanvas({ state: CanvasState.COMPLETE }),
                 randomCanvas({ state: CanvasState.COMPLETE }),
@@ -269,10 +268,10 @@ describe('CanvasModuleModule', () => {
                 chain
             });
             const context = testing.createAfterBlockApplyContext({
-                block: randomBlock(),
+                block: randomBlock({ height: 150 }),
                 stateStore
             });
-            const setMock = jest.spyOn(stateStore.chain, 'set');
+            const setMock = jest.spyOn(stateStore.chain, "set");
 
             testClass.init({
                 channel: testing.mocks.channelMock,
@@ -303,15 +302,15 @@ describe('CanvasModuleModule', () => {
             );
         });
 
-        it('should do nothing if no times have elapsed', async () => {
+        it("should do nothing if no times have elapsed", async () => {
             const canvases = [
-                randomCanvas({ state: CanvasState.PENDING }),
-                randomCanvas({ state: CanvasState.PENDING }),
-                randomCanvas({ state: CanvasState.PENDING }),
+                randomCanvas({ startBlockHeight: BigInt(100), endBlockHeight: BigInt(200), state: CanvasState.PENDING }),
+                randomCanvas({ startBlockHeight: BigInt(100), endBlockHeight: BigInt(200), state: CanvasState.PENDING }),
+                randomCanvas({ startBlockHeight: BigInt(100), endBlockHeight: BigInt(200), state: CanvasState.PENDING }),
 
-                randomCanvas({ state: CanvasState.ACTIVE }),
-                randomCanvas({ state: CanvasState.ACTIVE }),
-                randomCanvas({ state: CanvasState.ACTIVE }),
+                randomCanvas({ startBlockHeight: BigInt(50), endBlockHeight: BigInt(150), state: CanvasState.ACTIVE }),
+                randomCanvas({ startBlockHeight: BigInt(50), endBlockHeight: BigInt(150), state: CanvasState.ACTIVE }),
+                randomCanvas({ startBlockHeight: BigInt(50), endBlockHeight: BigInt(150), state: CanvasState.ACTIVE }),
 
                 randomCanvas({ state: CanvasState.COMPLETE }),
                 randomCanvas({ state: CanvasState.COMPLETE }),
@@ -338,10 +337,10 @@ describe('CanvasModuleModule', () => {
                 chain
             });
             const context = testing.createAfterBlockApplyContext({
-                block: randomBlock(),
+                block: randomBlock({ height: 99 }),
                 stateStore
             });
-            const setMock = jest.spyOn(stateStore.chain, 'set');
+            const setMock = jest.spyOn(stateStore.chain, "set");
 
             await testClass.afterBlockApply(context);
 
@@ -359,7 +358,7 @@ describe('CanvasModuleModule', () => {
             );
         });
 
-        it('uninitialized', async () => {
+        it("uninitialized", async () => {
             const stateStore = new testing.mocks.StateStoreMock({
                 accounts: [account]
             });
@@ -367,7 +366,7 @@ describe('CanvasModuleModule', () => {
                 block: randomBlock(),
                 stateStore
             });
-            const setMock = jest.spyOn(stateStore.chain, 'set');
+            const setMock = jest.spyOn(stateStore.chain, "set");
 
             await testClass.afterBlockApply(context);
 

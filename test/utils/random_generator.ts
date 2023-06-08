@@ -1,8 +1,6 @@
 import { Block } from "@liskhq/lisk-chain";
 import { CanvasPayload, CanvasState } from "../../src/app/modules/canvas/schemas";
 
-export const now = (): bigint => BigInt(Math.floor(Date.now() / 1000));
-
 export const numberBetween = (lower: number, upper: number): number => lower + Math.floor(Math.random() * (upper - lower));
 
 export const randomBuffer = (length: number): Buffer => {
@@ -21,12 +19,11 @@ export const randomCanvas = (overwrite = {}): CanvasPayload => {
     return {
         ownerId: randomAddress(),
         costPerPixel: BigInt(numberBetween(0, 4294967295)),
-        startTime: now() + BigInt(numberBetween(0, 604800)),
-        endTime: now() + BigInt(numberBetween(1209600, 1814400)),
+        startBlockHeight: BigInt(numberBetween(0, 1000000)),
+        endBlockHeight: BigInt(numberBetween(1000001, 2000000)),
         width: numberBetween(0, 10000),
         height: numberBetween(0, 10000),
         timeBetweenDraws: numberBetween(0, 4294967295),
-        seed: BigInt(numberBetween(0, Number.MAX_SAFE_INTEGER)),
         state: CanvasState.ACTIVE,
         ...overwrite,
     };

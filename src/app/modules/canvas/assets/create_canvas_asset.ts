@@ -5,12 +5,11 @@ import { canvasSchema, PendingPayload, pendingSchema } from "../schemas";
 export interface CreateCanvasPayload {
     canvasId: number;
     costPerPixel: bigint;
-    startTime: bigint;
-    endTime: bigint;
+    startBlockHeight: bigint;
+    endBlockHeight: bigint;
     width: number;
     height: number;
     timeBetweenDraws: number;
-    seed: bigint;
 }
 
 export class CreateCanvasAsset extends BaseAsset<CreateCanvasPayload> {
@@ -22,21 +21,20 @@ export class CreateCanvasAsset extends BaseAsset<CreateCanvasPayload> {
         $id: "canvas/createCanvas-asset",
         title: "CreateCanvasAsset transaction asset for canvas module",
         type: "object",
-        required: ["canvasId", "costPerPixel", "startTime", "endTime", "width", "height", "timeBetweenDraws", "seed"],
+        required: ["canvasId", "costPerPixel", "startBlockHeight", "endBlockHeight", "width", "height", "timeBetweenDraws"],
         properties: {
             canvasId: { fieldNumber: 1, dataType: "uint32" },
             costPerPixel: { fieldNumber: 2, dataType: "uint64" },
-            startTime: { fieldNumber: 3, dataType: "uint64" },
-            endTime: { fieldNumber: 4, dataType: "uint64" },
+            startBlockHeight: { fieldNumber: 3, dataType: "uint64" },
+            endBlockHeight: { fieldNumber: 4, dataType: "uint64" },
             width: { fieldNumber: 5, dataType: "uint32" },
             height: { fieldNumber: 6, dataType: "uint32" },
             timeBetweenDraws: { fieldNumber: 7, dataType: "uint32" },
-            seed: { fieldNumber: 8, dataType: "uint64" },
         },
     };
 
     public validate(context: ValidateAssetContext<CreateCanvasPayload>): void {
-        const { asset } = context;
+        const { asset, header } = context;
 
         if (asset.width < 0 || asset.width > 10000)
         {
@@ -53,26 +51,19 @@ export class CreateCanvasAsset extends BaseAsset<CreateCanvasPayload> {
             throw new Error("Cost per pixel invalid");
         }
 
-        if (asset.seed < 0)
+        if (asset.startBlockHeight < header.height)
         {
-            throw new Error("Seed invalid");
+            throw new Error("Start block height cannot be in the past");
         }
 
-        const now = BigInt(Math.floor(Date.now() / 1000));
-
-        if (asset.startTime < now)
+        if (asset.endBlockHeight < header.height)
         {
-            throw new Error("Start time cannot be in the past");
+            throw new Error("End block height cannot be in the past");
         }
 
-        if (asset.endTime < now)
+        if (asset.startBlockHeight > asset.endBlockHeight)
         {
-            throw new Error("End time cannot be in the past");
-        }
-
-        if (asset.startTime > asset.endTime)
-        {
-            throw new Error("End time must be greater than start time");
+            throw new Error("End block height must be greater than start block height");
         }
     }
 
@@ -97,12 +88,11 @@ export class CreateCanvasAsset extends BaseAsset<CreateCanvasPayload> {
         const canvas = {
             ownerId: transaction.senderAddress,
             costPerPixel: asset.costPerPixel,
-            startTime: asset.startTime,
-            endTime: asset.endTime,
+            startBlockHeight: asset.startBlockHeight,
+            endBlockHeight: asset.endBlockHeight,
             width: asset.width,
             height: asset.height,
             timeBetweenDraws: asset.timeBetweenDraws,
-            seed: asset.seed,
         };
         await stateStore.chain.set(canvasId, codec.encode(canvasSchema, canvas));
 

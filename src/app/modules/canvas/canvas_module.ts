@@ -3,8 +3,8 @@ import { strict as assert } from "assert";
 import { ChangeCanvasAsset } from "./assets/change_canvas_asset";
 import { CreateCanvasAsset } from "./assets/create_canvas_asset";
 import { DrawPixelAsset, DrawPixelPayload, drawPixelSchema } from "./assets/draw_pixel_asset";
-import { serialiseCanvasId, serialisePixelId } from "./utils";
-import { AccountType, ActivePayload, activeSchema, AddressPayload, addressSchema, CanvasAccount, CanvasPayload, canvasSchema, CanvasState, CompletePayload, completeSchema, PendingPayload, pendingSchema, PixelPayload, pixelSchema } from "./schemas";
+import { serialiseCanvasId } from "./utils";
+import { AccountType, ActivePayload, activeSchema, AddressPayload, addressSchema, CanvasAccount, CanvasPayload, CanvasResponse, canvasSchema, CanvasState, CompletePayload, completeSchema, PendingPayload, pendingSchema } from "./schemas";
 
 export class CanvasModule extends BaseModule {
     public static readonly MODULE_ID = 1000;
@@ -25,14 +25,12 @@ export class CanvasModule extends BaseModule {
         },
     };
     public actions = {
-        getCanvas: async (params: Record<string, unknown>) => this.getCanvas(params),
+        getCanvas: async (params) => this.getCanvas(params),
         getPendingCanvases: async () => this.getPendingCanvases(),
         getActiveCanvases: async () => this.getActiveCanvases(),
         getCompleteCanvases: async () => this.getCompleteCanvases(),
-        getPixels: async (params: Record<string, unknown>) => this.getPixels(params),
     };
     public reducers = {
-        getLastBlockHeight: async () => this.getLastBlockHeight(),
         getWalletAddress: async () => this.getWalletAddress(),
         getAdminAddress: async () => this.getAdminAddress(),
     };
@@ -44,13 +42,13 @@ export class CanvasModule extends BaseModule {
     public events = ["started", "completed", "pixelChangeSubmitted", "pixelChangeCommitted"];
 
     // Lifecycle hooks
-    public async beforeBlockApply(_input: BeforeBlockApplyContext) {
+    public async beforeBlockApply(_input: BeforeBlockApplyContext): Promise<void> {
         // Get any data from stateStore using block info, below is an example getting a generator
         // const generatorAddress = getAddressFromPublicKey(_input.block.header.generatorPublicKey);
         // const generator = await _input.stateStore.account.get<TokenAccount>(generatorAddress);
     }
 
-    public async afterBlockApply(context: AfterBlockApplyContext) {
+    public async afterBlockApply(context: AfterBlockApplyContext): Promise<void> {
         const pendingToCommit: number[] = [];
         const activeToCommit: number[] = [];
 
@@ -122,12 +120,12 @@ export class CanvasModule extends BaseModule {
         await context.stateStore.chain.set("canvas:complete", codec.encode(completeSchema, complete));
     }
 
-    public async beforeTransactionApply(_input: TransactionApplyContext) {
+    public async beforeTransactionApply(_input: TransactionApplyContext): Promise<void> {
         // Get any data from stateStore using transaction info, below is an example
         // const sender = await _input.stateStore.account.getOrDefault<TokenAccount>(_input.transaction.senderAddress);
     }
 
-    public async afterTransactionApply(_input: TransactionApplyContext) {
+    public async afterTransactionApply(_input: TransactionApplyContext): Promise<void> {
         if (_input.transaction.moduleID === CanvasModule.MODULE_ID &&
             _input.transaction.assetID === DrawPixelAsset.ASSET_ID)
         {
@@ -158,7 +156,7 @@ export class CanvasModule extends BaseModule {
         }
     }
 
-    private async getCanvas(params: Record<string, unknown>) {
+    private async getCanvas(params: { canvasId: string }): Promise<CanvasResponse|null> {
         const canvasId = serialiseCanvasId(Number(params.canvasId));
         const canvasBuffer = await this._dataAccess.getChainState(canvasId);
 
@@ -177,80 +175,37 @@ export class CanvasModule extends BaseModule {
         };
     }
 
-    private async getPendingCanvases() {
+    private async getPendingCanvases(): Promise<PendingPayload> {
         const pendingBuffer = await this._dataAccess.getChainState("canvas:pending");
 
         if (pendingBuffer === undefined)
         {
-            return [];
+            return { canvasIds: [] };
         }
 
         return codec.decode<PendingPayload>(pendingSchema, pendingBuffer);
     }
 
-    private async getActiveCanvases() {
+    private async getActiveCanvases(): Promise<ActivePayload> {
         const activeBuffer = await this._dataAccess.getChainState("canvas:active");
 
         if (activeBuffer === undefined)
         {
-            return [];
+            return { canvasIds: [] };
         }
 
         return codec.decode<ActivePayload>(activeSchema, activeBuffer);
     }
 
-    private async getCompleteCanvases() {
+    private async getCompleteCanvases(): Promise<CompletePayload> {
         const completeBuffer = await this._dataAccess.getChainState("canvas:complete");
 
         if (completeBuffer === undefined)
         {
-            return [];
+            return { canvasIds: [] };
         }
 
         return codec.decode<CompletePayload>(completeSchema, completeBuffer);
-    }
-
-    private async getPixels(params: Record<string, unknown>) {
-        const canvasId = serialiseCanvasId(Number(params.canvasId));
-        const canvasBuffer = await this._dataAccess.getChainState(canvasId);
-
-        if (canvasBuffer === undefined)
-        {
-            return null;
-        }
-
-        const canvas = codec.decode<CanvasPayload>(canvasSchema, canvasBuffer);
-        const pixels: number[][] = [];
-
-        for (let y = 0; y < canvas.height; y += 1)
-        {
-            if (pixels[y] === undefined)
-            {
-                pixels[y] = [];
-            }
-
-            for (let x = 0; x < canvas.width; x += 1)
-            {
-                const pixelId = serialisePixelId(Number(params.canvasId), x, y);
-                const pixelBuffer = await this._dataAccess.getChainState(pixelId);
-
-                if (pixelBuffer === undefined)
-                {
-                    pixels[y][x] = 0xFFFFFF;
-                    continue;
-                }
-
-                const pixel = codec.decode<PixelPayload>(pixelSchema, pixelBuffer);
-                pixels[y][x] = pixel.colour;
-            }
-        }
-
-        return pixels;
-    };
-
-    private async getLastBlockHeight(): Promise<number> {
-        const header = await this._dataAccess.getLastBlockHeader();
-        return header.height;
     }
 
     private async getWalletAddress(): Promise<Buffer|null> {

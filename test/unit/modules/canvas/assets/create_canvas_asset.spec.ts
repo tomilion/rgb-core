@@ -142,7 +142,7 @@ describe("CreateCanvasAsset", () => {
             await expect(testClass.apply(context)).rejects.toThrow("User invalid");
         });
 
-        it("should save canvas to state store", async (...matchers: Y) => {
+        it("should save canvas to state store", async () => {
             const stateStore = new testing.mocks.StateStoreMock({
                 accounts: [account]
             });

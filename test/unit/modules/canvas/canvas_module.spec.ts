@@ -1,8 +1,8 @@
 import { codec, testing } from "lisk-sdk";
 import { Account } from "@liskhq/lisk-chain/dist-node/types";
 import { CanvasModule } from "../../../../src/app/modules/canvas/canvas_module";
-import { ActivePayload, activeSchema, canvasSchema, CanvasState, CompletePayload, completeSchema, PendingPayload, pendingSchema, pixelSchema } from "../../../../src/app/modules/canvas/schemas";
-import { numberBetween, randomAddress, randomBlock, randomCanvas } from "../../../utils/random_generator";
+import { ActivePayload, activeSchema, canvasSchema, CanvasState, CompletePayload, completeSchema, PendingPayload, pendingSchema } from "../../../../src/app/modules/canvas/schemas";
+import { numberBetween, randomBlock, randomCanvas } from "../../../utils/random_generator";
 
 describe("CanvasModuleModule", () => {
     let testClass: CanvasModule;
@@ -71,23 +71,15 @@ describe("CanvasModuleModule", () => {
             });
         });
 
-        describe("getPixels", () => {
-            it("should return pixels", async () => {
-                const canvasId = numberBetween(0, 4294967295);
-                const canvas = randomCanvas({ width: 100, height: 50 });
-                const expected: number[][] = Array.from(Array(canvas.height), () => []);
+        describe("getPendingCanvases", () => {
+            it("should return pending canvases", async () => {
+                const canvasIds = [
+                    numberBetween(0, 4294967295),
+                    numberBetween(0, 4294967295),
+                    numberBetween(0, 4294967295),
+                ];
 
-                chain[`canvas-${canvasId}`] = codec.encode(canvasSchema, canvas);
-
-                for (let y = 0; y < canvas.height; y += 1)
-                {
-                    for (let x = 0; x < canvas.width; x += 1)
-                    {
-                        const colour = numberBetween(0, 0xFFFFFF);
-                        chain[`canvas-${canvasId}-pixel-${x}-${y}`] = codec.encode(pixelSchema, { ownerId: randomAddress(), colour });
-                        expected[y][x] = colour;
-                    }
-                }
+                chain["canvas:pending"] = codec.encode(pendingSchema, { canvasIds: canvasIds });
 
                 testClass.init({
                     channel: testing.mocks.channelMock,
@@ -95,16 +87,39 @@ describe("CanvasModuleModule", () => {
                     dataAccess: new testing.mocks.DataAccessMock({ chainState: chain }),
                 });
 
-                const result = await testClass.actions.getPixels({ canvasId });
+                const result = await testClass.actions.getPendingCanvases();
 
+                const expected = {
+                    canvasIds: canvasIds,
+                };
                 expect(result).toEqual(expected);
             });
 
-            it("should default pixels to white if not defined", async () => {
-                const canvasId = numberBetween(0, 4294967295);
-                const canvas = randomCanvas({ width: 100, height: 50 });
+            it("should return nothing if no pending canvases", async () => {
+                testClass.init({
+                    channel: testing.mocks.channelMock,
+                    logger: testing.mocks.loggerMock,
+                    dataAccess: new testing.mocks.DataAccessMock({ chainState: chain }),
+                });
 
-                chain[`canvas-${canvasId}`] = codec.encode(canvasSchema, canvas);
+                const result = await testClass.actions.getPendingCanvases();
+
+                const expected = {
+                    canvasIds: [],
+                };
+                expect(result).toEqual(expected);
+            });
+        });
+
+        describe("getActiveCanvases", () => {
+            it("should return active canvases", async () => {
+                const canvasIds = [
+                    numberBetween(0, 4294967295),
+                    numberBetween(0, 4294967295),
+                    numberBetween(0, 4294967295),
+                ];
+
+                chain["canvas:active"] = codec.encode(activeSchema, { canvasIds: canvasIds });
 
                 testClass.init({
                     channel: testing.mocks.channelMock,
@@ -112,17 +127,39 @@ describe("CanvasModuleModule", () => {
                     dataAccess: new testing.mocks.DataAccessMock({ chainState: chain }),
                 });
 
-                const result = await testClass.actions.getPixels({ canvasId });
+                const result = await testClass.actions.getActiveCanvases();
 
-                const expected = new Array(canvas.height).fill(new Array(canvas.width).fill(0xFFFFFF));
+                const expected = {
+                    canvasIds: canvasIds,
+                };
                 expect(result).toEqual(expected);
             });
 
-            it("should return nothing if no canvas with id", async () => {
-                const canvasId = numberBetween(0, 4294967295);
-                const canvas = randomCanvas();
+            it("should return nothing if no active canvases", async () => {
+                testClass.init({
+                    channel: testing.mocks.channelMock,
+                    logger: testing.mocks.loggerMock,
+                    dataAccess: new testing.mocks.DataAccessMock({ chainState: chain }),
+                });
 
-                chain[`canvas-${canvasId}`] = codec.encode(canvasSchema, canvas);
+                const result = await testClass.actions.getActiveCanvases();
+
+                const expected = {
+                    canvasIds: [],
+                };
+                expect(result).toEqual(expected);
+            });
+        });
+
+        describe("getCompleteCanvases", () => {
+            it("should return complete canvases", async () => {
+                const canvasIds = [
+                    numberBetween(0, 4294967295),
+                    numberBetween(0, 4294967295),
+                    numberBetween(0, 4294967295),
+                ];
+
+                chain["canvas:complete"] = codec.encode(completeSchema, { canvasIds: canvasIds });
 
                 testClass.init({
                     channel: testing.mocks.channelMock,
@@ -130,9 +167,27 @@ describe("CanvasModuleModule", () => {
                     dataAccess: new testing.mocks.DataAccessMock({ chainState: chain }),
                 });
 
-                const result = await testClass.actions.getPixels({ canvasId: numberBetween(0, 4294967295) });
+                const result = await testClass.actions.getCompleteCanvases();
 
-                expect(result).toBeNull();
+                const expected = {
+                    canvasIds: canvasIds,
+                };
+                expect(result).toEqual(expected);
+            });
+
+            it("should return nothing if no complete canvases", async () => {
+                testClass.init({
+                    channel: testing.mocks.channelMock,
+                    logger: testing.mocks.loggerMock,
+                    dataAccess: new testing.mocks.DataAccessMock({ chainState: chain }),
+                });
+
+                const result = await testClass.actions.getCompleteCanvases();
+
+                const expected = {
+                    canvasIds: [],
+                };
+                expect(result).toEqual(expected);
             });
         });
     });

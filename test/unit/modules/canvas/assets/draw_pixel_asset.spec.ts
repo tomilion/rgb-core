@@ -4,7 +4,7 @@ import { Account } from "@liskhq/lisk-chain/dist-node/types";
 import { when } from "jest-when";
 import { DrawPixelAsset, DrawPixelPayload } from '../../../../../src/app/modules/canvas/assets/draw_pixel_asset';
 import { CanvasModule } from "../../../../../src/app/modules/canvas/canvas_module";
-import { accountSchema, CanvasPayload, canvasSchema, CanvasState, pixelSchema } from "../../../../../src/app/modules/canvas/schemas";
+import { accountSchema, CanvasPayload, canvasSchema, CanvasState } from "../../../../../src/app/modules/canvas/schemas";
 import { numberBetween, randomCanvas } from "../../../../utils/random_generator";
 
 describe('DrawPixelAsset', () => {
@@ -93,17 +93,22 @@ describe('DrawPixelAsset', () => {
             reducerHandler = testing.mocks.reducerHandlerMock;
         });
 
-        it('should save pixel to state store', async () => {
+        it('should update existing canvas account in state store', async () => {
             const x = numberBetween(0, canvas.width - 1);
             const y = numberBetween(0, canvas.height - 1);
-            const height = Math.floor(canvas.timeBetweenDraws / 10);
+            const height = numberBetween(canvas.timeBetweenDraws, canvas.timeBetweenDraws + 100000);
+            const lastBlockHeaders = [{ height: height - 1 }, { height: height }];
 
             mockAsset.coords = x + (y * canvas.height);
             chain[`canvas-${mockAsset.canvasId}`] = codec.encode(canvasSchema, canvas);
+            chain[`canvas-${mockAsset.canvasId}-account-${account.address.toString("hex")}`] = codec.encode(accountSchema, {
+                lastBlockHeight: height - canvas.timeBetweenDraws
+            });
 
             const stateStore = new testing.mocks.StateStoreMock({
                 accounts: [account],
-                chain
+                chain,
+                lastBlockHeaders,
             });
             const context = testing.createApplyAssetContext({
                 transaction: { senderAddress: account.address, nonce: BigInt(1) } as any,
@@ -118,33 +123,29 @@ describe('DrawPixelAsset', () => {
 
             await testClass.apply(context);
 
-            expect(setMock).toHaveBeenCalledWith(
-                `canvas-${mockAsset.canvasId}-pixel-${x}-${y}`,
-                codec.encode(pixelSchema, {
-                    ownerId: account.address,
-                    colour: mockAsset.colour,
-                })
-            );
             expect(setMock).toHaveBeenCalledWith(
                 `canvas-${mockAsset.canvasId}-account-${account.address.toString("hex")}`,
                 codec.encode(accountSchema, { lastBlockHeight: height + 1 })
             );
         });
 
-        it('should update existing canvas account in state store', async () => {
+        it('should allow multiples draws to same block with timeBetweenDraws of zero', async () => {
             const x = numberBetween(0, canvas.width - 1);
             const y = numberBetween(0, canvas.height - 1);
-            const height = numberBetween(Math.floor(canvas.timeBetweenDraws / 10), Math.floor(canvas.timeBetweenDraws / 10) + 100000);
+            const height = numberBetween(100, 100000);
+            const lastBlockHeaders = [{ height: height - 1 }, { height: height }];
+            canvas.timeBetweenDraws = 0;
 
             mockAsset.coords = x + (y * canvas.height);
             chain[`canvas-${mockAsset.canvasId}`] = codec.encode(canvasSchema, canvas);
             chain[`canvas-${mockAsset.canvasId}-account-${account.address.toString("hex")}`] = codec.encode(accountSchema, {
-                lastBlockHeight: height - Math.floor(canvas.timeBetweenDraws / 10)
+                lastBlockHeight: height + 1
             });
 
             const stateStore = new testing.mocks.StateStoreMock({
                 accounts: [account],
-                chain
+                chain,
+                lastBlockHeaders,
             });
             const context = testing.createApplyAssetContext({
                 transaction: { senderAddress: account.address, nonce: BigInt(1) } as any,
@@ -159,13 +160,6 @@ describe('DrawPixelAsset', () => {
 
             await testClass.apply(context);
 
-            expect(setMock).toHaveBeenCalledWith(
-                `canvas-${mockAsset.canvasId}-pixel-${x}-${y}`,
-                codec.encode(pixelSchema, {
-                    ownerId: account.address,
-                    colour: mockAsset.colour,
-                })
-            );
             expect(setMock).toHaveBeenCalledWith(
                 `canvas-${mockAsset.canvasId}-account-${account.address.toString("hex")}`,
                 codec.encode(accountSchema, { lastBlockHeight: height + 1 })
@@ -226,17 +220,19 @@ describe('DrawPixelAsset', () => {
         it('should throw user not waited for draw timeout', async () => {
             const x = numberBetween(0, canvas.width - 1);
             const y = numberBetween(0, canvas.height - 1);
-            const height = numberBetween(Math.floor(canvas.timeBetweenDraws / 10), Math.floor(canvas.timeBetweenDraws / 10) + 100000);
+            const height = numberBetween(canvas.timeBetweenDraws, canvas.timeBetweenDraws + 100000);
+            const lastBlockHeaders = [{ height: height - 1 }, { height: height }];
 
             mockAsset.coords = x + (y * canvas.height);
             chain[`canvas-${mockAsset.canvasId}`] = codec.encode(canvasSchema, canvas);
             chain[`canvas-${mockAsset.canvasId}-account-${account.address.toString("hex")}`] = codec.encode(accountSchema, {
-                lastBlockHeight: height - Math.floor(canvas.timeBetweenDraws / 10) + 1
+                lastBlockHeight: height - canvas.timeBetweenDraws + 2
             });
 
             const stateStore = new testing.mocks.StateStoreMock({
                 accounts: [account],
-                chain
+                chain,
+                lastBlockHeaders
             });
             const context = testing.createApplyAssetContext({
                 transaction: { senderAddress: account.address, nonce: BigInt(1) } as any,

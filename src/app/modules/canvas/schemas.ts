@@ -31,21 +31,6 @@ export const canvasSchema = {
     },
 };
 
-export interface PixelPayload {
-    ownerId: Buffer;
-    colour: number;
-}
-
-export const pixelSchema = {
-    $id: "canvas/pixel",
-    type: "object",
-    required: ["ownerId", "colour"],
-    properties: {
-        ownerId: { fieldNumber: 1, dataType: "bytes", minLength: 20, maxLength: 20 },
-        colour: { fieldNumber: 2, dataType: "uint32" },
-    },
-};
-
 export interface AccountPayload {
     lastBlockHeight: number;
 }
@@ -119,4 +104,15 @@ export enum AccountType {
     Admin = "ADMIN",
     Wallet = "WALLET",
     Default = "DEFAULT",
+}
+
+export interface CanvasResponse {
+    ownerId: string;
+    costPerPixel: number;
+    startBlockHeight: number;
+    endBlockHeight: number;
+    width: number;
+    height: number;
+    timeBetweenDraws: number;
+    state: number;
 }

@@ -1,6 +1,6 @@
 import { ApplyAssetContext, BaseAsset, codec, ValidateAssetContext } from "lisk-sdk";
-import { serialiseAccountId, serialiseCanvasId, serialisePixelId } from "../utils";
-import { AccountPayload, accountSchema, CanvasPayload, canvasSchema, CanvasState, pixelSchema } from "../schemas";
+import { serialiseAccountId, serialiseCanvasId } from "../utils";
+import { AccountPayload, accountSchema, CanvasPayload, canvasSchema, CanvasState } from "../schemas";
 
 export interface DrawPixelPayload {
     canvasId: number;
@@ -71,11 +71,9 @@ export class DrawPixelAsset extends BaseAsset<DrawPixelPayload> {
         const accountId = serialiseAccountId(asset.canvasId, transaction.senderAddress.toString("hex"));
         const accountBuffer = await stateStore.chain.get(accountId);
         const account = (accountBuffer !== undefined) ? codec.decode<AccountPayload>(accountSchema, accountBuffer) : { lastBlockHeight: 0 };
-        const lastBlockHeight = await reducerHandler.invoke<number>("canvas:getLastBlockHeight");
-        const currentBlockHeight = lastBlockHeight + 1;
+        const lastBlock = stateStore.chain.lastBlockHeaders[stateStore.chain.lastBlockHeaders.length - 1];
 
-        // TODO: get block time from config
-        if ((account.lastBlockHeight + (canvas.timeBetweenDraws / 10)) > currentBlockHeight)
+        if ((account.lastBlockHeight + canvas.timeBetweenDraws) > (lastBlock.height + 1))
         {
             throw Error("Too many draws");
         }
@@ -92,14 +90,7 @@ export class DrawPixelAsset extends BaseAsset<DrawPixelPayload> {
             amount: canvas.costPerPixel,
         });
 
-        const xCoord = asset.coords % canvas.width;
-        const yCoord = Math.floor(asset.coords / canvas.height);
-        const pixelId = serialisePixelId(asset.canvasId, xCoord, yCoord);
-
-        // Update colour and current owner of pixel
-        await stateStore.chain.set(pixelId, codec.encode(pixelSchema, { ownerId: transaction.senderAddress, colour: asset.colour }));
-
         // Set last draw time
-        await stateStore.chain.set(accountId, codec.encode(accountSchema, { lastBlockHeight: currentBlockHeight }));
+        await stateStore.chain.set(accountId, codec.encode(accountSchema, { lastBlockHeight: lastBlock.height + 1 }));
     }
 }

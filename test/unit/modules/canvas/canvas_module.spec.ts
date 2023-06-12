@@ -2,7 +2,9 @@ import { codec, testing } from "lisk-sdk";
 import { Account } from "@liskhq/lisk-chain/dist-node/types";
 import { CanvasModule } from "../../../../src/app/modules/canvas/canvas_module";
 import { ActivePayload, activeSchema, canvasSchema, CanvasState, CompletePayload, completeSchema, PendingPayload, pendingSchema } from "../../../../src/app/modules/canvas/schemas";
-import { numberBetween, randomBlock, randomCanvas } from "../../../utils/random_generator";
+import { numberBetween, randomBlock, randomCanvas, randomDrawPixel, randomTransaction } from "../../../utils/random_generator";
+import { DrawPixelAsset, drawPixelSchema } from "../../../../src/app/modules/canvas/assets/draw_pixel_asset";
+import { BaseModuleChannel } from "lisk-framework/dist-node/modules/base_module";
 
 describe("CanvasModuleModule", () => {
     let testClass: CanvasModule;
@@ -413,7 +415,7 @@ describe("CanvasModuleModule", () => {
             );
         });
 
-        it("uninitialized", async () => {
+        it("uninitialized canvases", async () => {
             const stateStore = new testing.mocks.StateStoreMock({
                 accounts: [account]
             });
@@ -437,6 +439,126 @@ describe("CanvasModuleModule", () => {
                 "canvas:complete",
                 codec.encode(completeSchema, { canvasIds: [] })
             );
+        });
+
+        it("should notify draw pixel assets committed", async () => {
+            const stateStore = new testing.mocks.StateStoreMock({
+                accounts: [account]
+            });
+            const height = numberBetween(0, 10000);
+            const drawPixelAssets = [
+                randomDrawPixel(),
+                randomDrawPixel(),
+            ];
+            const payload = [
+                randomTransaction(), // Ignored because module and asset IDs don't match
+                randomTransaction({ moduleID: CanvasModule.MODULE_ID }), // Ignored because asset ID doesn't match
+                randomTransaction({ assetID: DrawPixelAsset.ASSET_ID }), // Ignored because module ID doesn't match
+                randomTransaction({
+                    moduleID: CanvasModule.MODULE_ID,
+                    assetID: DrawPixelAsset.ASSET_ID,
+                    asset: codec.encode(drawPixelSchema, drawPixelAssets[0])
+                }),
+                randomTransaction({
+                    moduleID: CanvasModule.MODULE_ID,
+                    assetID: DrawPixelAsset.ASSET_ID,
+                    asset: codec.encode(drawPixelSchema, drawPixelAssets[1])
+                }),
+            ];
+            const channel: BaseModuleChannel = testing.mocks.channelMock;
+            const publishMock = jest.spyOn(channel, "publish");
+
+            testClass.init({
+                channel: channel,
+                logger: testing.mocks.loggerMock,
+                dataAccess: new testing.mocks.DataAccessMock(),
+            });
+
+            const context = testing.createAfterBlockApplyContext({
+                block: randomBlock({ height }, payload),
+                stateStore
+            });
+            await testClass.afterBlockApply(context);
+
+            expect(publishMock).toHaveBeenCalledWith(
+                "canvas:pixelChangeCommitted",
+                {
+                    address: payload[3].senderAddress.toString("hex"),
+                    transactionId: payload[3].id.toString("hex"),
+                    blockHeight: height,
+                    pixel: drawPixelAssets[0],
+                }
+            );
+            expect(publishMock).toHaveBeenCalledWith(
+                "canvas:pixelChangeCommitted",
+                {
+                    address: payload[4].senderAddress.toString("hex"),
+                    transactionId: payload[4].id.toString("hex"),
+                    blockHeight: height,
+                    pixel: drawPixelAssets[1],
+                }
+            );
+        });
+    });
+
+    describe("afterTransactionApply", () => {
+        let channel: BaseModuleChannel;
+
+        beforeEach(() => {
+            channel = testing.mocks.channelMock;
+            testClass.init({
+                channel: channel,
+                logger: testing.mocks.loggerMock,
+                dataAccess: new testing.mocks.DataAccessMock(),
+            });
+        });
+
+        it("should notify draw pixel assets submitted", async () => {
+            const publishMock = jest.spyOn(channel, "publish");
+            const drawPixelAsset = randomDrawPixel();
+            const transaction = randomTransaction({
+                moduleID: CanvasModule.MODULE_ID,
+                assetID: DrawPixelAsset.ASSET_ID,
+                asset: codec.encode(drawPixelSchema, drawPixelAsset),
+            });
+
+            const context = testing.createTransactionApplyContext({ transaction });
+            await testClass.afterTransactionApply(context);
+
+            expect(publishMock).toHaveBeenCalledWith(
+                "canvas:pixelChangeSubmitted",
+                {
+                    address: transaction.senderAddress.toString("hex"),
+                    transactionId: transaction.id.toString("hex"),
+                    pixel: drawPixelAsset,
+                }
+            );
+        });
+
+        it("should ignore transactions with incorrect module id", async () => {
+            const publishMock = jest.spyOn(channel, "publish");
+            const transaction = randomTransaction({
+                moduleID: numberBetween(100000, 1000000),
+                assetID: DrawPixelAsset.ASSET_ID,
+            });
+
+            const context = testing.createTransactionApplyContext({ transaction });
+            await testClass.afterTransactionApply(context);
+
+            expect(publishMock).toHaveBeenCalledTimes(0);
+        });
+
+        it("should ignore transactions with incorrect asset id", async () => {
+            const publishMock = jest.spyOn(channel, "publish");
+            const transaction = randomTransaction({
+                moduleID: CanvasModule.MODULE_ID,
+                assetID: numberBetween(100000, 1000000),
+            });
+
+            const context = testing.createTransactionApplyContext({ transaction });
+            await testClass.afterTransactionApply(context);
+
+            expect(publishMock).toHaveBeenCalledTimes(0);
         });
     });
 });

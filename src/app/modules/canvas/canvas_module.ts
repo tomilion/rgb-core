@@ -49,30 +49,31 @@ export class CanvasModule extends BaseModule {
     }
 
     public async afterBlockApply(context: AfterBlockApplyContext): Promise<void> {
+        const { block, stateStore } = context;
         const pendingToCommit: number[] = [];
         const activeToCommit: number[] = [];
 
-        const pendingBuffer = await context.stateStore.chain.get("canvas:pending");
+        const pendingBuffer = await stateStore.chain.get("canvas:pending");
         const pending = (pendingBuffer !== undefined) ? codec.decode<PendingPayload>(pendingSchema, pendingBuffer) : { canvasIds: [] };
 
-        const activeBuffer = await context.stateStore.chain.get("canvas:active");
+        const activeBuffer = await stateStore.chain.get("canvas:active");
         const active = (activeBuffer !== undefined) ? codec.decode<ActivePayload>(activeSchema, activeBuffer) : { canvasIds: [] };
 
-        const completeBuffer = await context.stateStore.chain.get("canvas:complete");
+        const completeBuffer = await stateStore.chain.get("canvas:complete");
         const complete = (completeBuffer !== undefined) ? codec.decode<CompletePayload>(completeSchema, completeBuffer) : { canvasIds: [] };
 
         for (const canvasId of pending.canvasIds)
         {
-            const canvasBuffer = await context.stateStore.chain.get(serialiseCanvasId(canvasId));
+            const canvasBuffer = await stateStore.chain.get(serialiseCanvasId(canvasId));
             assert(canvasBuffer !== undefined);
             const canvas = codec.decode<CanvasPayload>(canvasSchema, canvasBuffer);
             assert(canvas.state === CanvasState.PENDING);
 
             // Automatically starting canvas after passing start time
-            if (canvas.startBlockHeight <= context.block.header.height)
+            if (canvas.startBlockHeight <= block.header.height)
             {
                 canvas.state = CanvasState.ACTIVE;
-                await context.stateStore.chain.set(serialiseCanvasId(canvasId), codec.encode(canvasSchema, canvas));
+                await stateStore.chain.set(serialiseCanvasId(canvasId), codec.encode(canvasSchema, canvas));
                 activeToCommit.push(canvasId);
                 this._channel.publish("canvas:started", { canvasId });
                 continue;
@@ -81,7 +82,7 @@ export class CanvasModule extends BaseModule {
             pendingToCommit.push(canvasId);
         }
 
-        for (const transaction of context.block.payload)
+        for (const transaction of block.payload)
         {
             if (transaction.moduleID === CanvasModule.MODULE_ID &&
                 transaction.assetID === DrawPixelAsset.ASSET_ID)
@@ -90,6 +91,7 @@ export class CanvasModule extends BaseModule {
                 this._channel.publish("canvas:pixelChangeCommitted", {
                     address: transaction.senderAddress.toString("hex"),
                     transactionId: transaction.id.toString("hex"),
+                    blockHeight: block.header.height,
                     pixel: pixel,
                 });
             }
@@ -97,16 +99,16 @@ export class CanvasModule extends BaseModule {
 
         for (const canvasId of active.canvasIds)
         {
-            const canvasBuffer = await context.stateStore.chain.get(serialiseCanvasId(canvasId));
+            const canvasBuffer = await stateStore.chain.get(serialiseCanvasId(canvasId));
             assert(canvasBuffer !== undefined);
             const canvas = codec.decode<CanvasPayload>(canvasSchema, canvasBuffer);
             assert(canvas.state === CanvasState.ACTIVE);
 
             // Automatically ending canvas after passing end time
-            if (canvas.endBlockHeight <= context.block.header.height)
+            if (canvas.endBlockHeight <= block.header.height)
             {
                 canvas.state = CanvasState.COMPLETE;
-                await context.stateStore.chain.set(serialiseCanvasId(canvasId), codec.encode(canvasSchema, canvas));
+                await stateStore.chain.set(serialiseCanvasId(canvasId), codec.encode(canvasSchema, canvas));
                 complete.canvasIds.push(canvasId);
                 this._channel.publish("canvas:completed", { canvasId });
                 continue;
@@ -115,9 +117,9 @@ export class CanvasModule extends BaseModule {
             activeToCommit.push(canvasId);
         }
 
-        await context.stateStore.chain.set("canvas:pending", codec.encode(pendingSchema, { canvasIds: pendingToCommit }));
-        await context.stateStore.chain.set("canvas:active", codec.encode(activeSchema, { canvasIds: activeToCommit }));
-        await context.stateStore.chain.set("canvas:complete", codec.encode(completeSchema, complete));
+        await stateStore.chain.set("canvas:pending", codec.encode(pendingSchema, { canvasIds: pendingToCommit }));
+        await stateStore.chain.set("canvas:active", codec.encode(activeSchema, { canvasIds: activeToCommit }));
+        await stateStore.chain.set("canvas:complete", codec.encode(completeSchema, complete));
     }
 
     public async beforeTransactionApply(_input: TransactionApplyContext): Promise<void> {

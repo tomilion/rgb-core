@@ -1,5 +1,6 @@
-import { Block } from "@liskhq/lisk-chain";
+import { Block, Transaction } from "@liskhq/lisk-chain";
 import { CanvasPayload, CanvasState } from "../../src/app/modules/canvas/schemas";
+import { DrawPixelPayload } from "../../src/app/modules/canvas/assets/draw_pixel_asset";
 
 export const numberBetween = (lower: number, upper: number): number => lower + Math.floor(Math.random() * (upper - lower));
 
@@ -29,7 +30,16 @@ export const randomCanvas = (overwrite = {}): CanvasPayload => {
     };
 };
 
-export const randomBlock = (overwriteHeader = {}, payload = []): Block => {
+export const randomDrawPixel = (overwrite = {}): DrawPixelPayload => {
+    return {
+        canvasId: numberBetween(0, 10000),
+        coords: numberBetween(0, 10000),
+        colour: numberBetween(0, 0x00FFFFFF),
+        ...overwrite,
+    };
+};
+
+export const randomBlock = (overwriteHeader = {}, payload: Transaction[] = []): Block => {
     return {
         header: {
             id: randomBuffer(20),
@@ -50,4 +60,17 @@ export const randomBlock = (overwriteHeader = {}, payload = []): Block => {
         },
         payload,
     };
+};
+
+export const randomTransaction = (overwrite = {}): Transaction => {
+    return new Transaction({
+        moduleID: numberBetween(100000, 1000000),
+        assetID: numberBetween(100000, 1000000),
+        senderPublicKey: randomBuffer(10),
+        nonce: BigInt(numberBetween(100000, 1000000)),
+        fee: BigInt(numberBetween(100000, 1000000)),
+        asset: randomBuffer(10),
+        signatures: [randomBuffer(10)],
+        ...overwrite
+    });
 };

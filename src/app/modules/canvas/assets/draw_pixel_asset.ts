@@ -33,13 +33,13 @@ export class DrawPixelAsset extends BaseAsset<DrawPixelPayload> {
         // Sanity check that coords are within 10000 x 10000 grid
         if (asset.coords < 0 || asset.coords >= 100000000)
         {
-            throw Error("Coords invalid");
+            throw new Error("Coords invalid");
         }
 
         // Only first 3 bytes should contain colour information
         if (asset.colour < 0 || asset.colour > 0x00FFFFFF)
         {
-            throw Error("Colour invalid");
+            throw new Error("Colour invalid");
         }
     }
 
@@ -50,21 +50,21 @@ export class DrawPixelAsset extends BaseAsset<DrawPixelPayload> {
 
         if (canvasBuffer === undefined)
         {
-            throw Error("Canvas does not exist");
+            throw new Error("Canvas does not exist");
         }
 
         const canvas = codec.decode<CanvasPayload>(canvasSchema, canvasBuffer);
 
         if (canvas.state !== CanvasState.ACTIVE)
         {
-            throw Error("Canvas not active");
+            throw new Error("Canvas not active");
         }
 
         // Coords encoded as numbered position in canvas eg. (1, 1) in a 1000 x 1000 canvas would be encoded as (1001)
         // as 0 -> 999 is y = 0 and 1000 -> 1999 is y = 1
         if (asset.coords >= (canvas.width * canvas.height))
         {
-            throw Error("Coords invalid");
+            throw new Error("Coords invalid");
         }
 
         // Check user has waited for draw timeout before drawing again
@@ -75,7 +75,7 @@ export class DrawPixelAsset extends BaseAsset<DrawPixelPayload> {
 
         if ((account.lastBlockHeight + canvas.timeBetweenDraws) > (lastBlock.height + 1))
         {
-            throw Error("Too many draws");
+            throw new Error("Too many draws");
         }
 
         const walletAddress = await reducerHandler.invoke<Buffer>("canvas:getWalletAddress");

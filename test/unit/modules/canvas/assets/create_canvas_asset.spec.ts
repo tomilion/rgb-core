@@ -1,7 +1,7 @@
 import { codec, testing } from "lisk-sdk";
-import { CreateCanvasAsset, CreateCanvasPayload } from "../../../../../src/app/modules/canvas/assets/create_canvas_asset";
+import { CreateCanvasAsset } from "../../../../../src/app/modules/canvas/assets/create_canvas_asset";
 import { CanvasModule } from "../../../../../src/app/modules/canvas/canvas_module";
-import { canvasSchema, pendingSchema } from "../../../../../src/app/modules/canvas/schemas";
+import { canvasSchema, CreateCanvasPayload, pendingSchema } from "../../../../../src/app/modules/canvas/schemas";
 import { numberBetween, randomAddress } from "../../../../utils/random_generator";
 import { ReducerHandler } from "lisk-framework/dist-node/types";
 import { when } from "jest-when";

@@ -1,7 +1,7 @@
 import { codec, testing } from "lisk-sdk";
-import { ChangeCanvasAsset, ChangeCanvasPayload } from "../../../../../src/app/modules/canvas/assets/change_canvas_asset";
+import { ChangeCanvasAsset } from "../../../../../src/app/modules/canvas/assets/change_canvas_asset";
 import { CanvasModule } from "../../../../../src/app/modules/canvas/canvas_module";
-import { canvasSchema, CanvasState } from "../../../../../src/app/modules/canvas/schemas";
+import { canvasSchema, CanvasState, ChangeCanvasPayload } from "../../../../../src/app/modules/canvas/schemas";
 import { numberBetween, randomCanvas, randomAddress } from "../../../../utils/random_generator";
 
 describe("ChangeCanvasAsset", () => {

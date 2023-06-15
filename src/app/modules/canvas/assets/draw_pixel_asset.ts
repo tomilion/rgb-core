@@ -1,24 +1,6 @@
 import { ApplyAssetContext, BaseAsset, codec, ValidateAssetContext } from "lisk-sdk";
 import { serialiseAccountId, serialiseCanvasId } from "../utils";
-import { AccountPayload, accountSchema, CanvasPayload, canvasSchema, CanvasState } from "../schemas";
-
-export interface DrawPixelPayload {
-    canvasId: number;
-    coords: number;
-    colour: number;
-}
-
-export const drawPixelSchema = {
-    $id: "canvas/drawPixel/asset",
-    title: "DrawPixelAsset transaction asset for Canvas module",
-    type: "object",
-    required: ["canvasId", "coords", "colour"],
-    properties: {
-        canvasId: { fieldNumber: 1, dataType: "uint32" },
-        coords: { fieldNumber: 2, dataType: "uint32" },
-        colour: { fieldNumber: 3, dataType: "uint32" },
-    },
-};
+import { AccountPayload, accountSchema, CanvasPayload, canvasSchema, CanvasState, DrawPixelPayload, drawPixelSchema } from "../schemas";
 
 export class DrawPixelAsset extends BaseAsset<DrawPixelPayload> {
     public static readonly ASSET_ID = 5;

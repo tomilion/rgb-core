@@ -1,16 +1,6 @@
 import { ApplyAssetContext, BaseAsset, codec, ValidateAssetContext } from "lisk-sdk";
 import { serialiseCanvasId } from "../utils";
-import { canvasSchema, PendingPayload, pendingSchema } from "../schemas";
-
-export interface CreateCanvasPayload {
-    canvasId: number;
-    costPerPixel: bigint;
-    startBlockHeight: bigint;
-    endBlockHeight: bigint;
-    width: number;
-    height: number;
-    timeBetweenDraws: number;
-}
+import { canvasSchema, CreateCanvasPayload, PendingPayload, pendingSchema } from "../schemas";
 
 export class CreateCanvasAsset extends BaseAsset<CreateCanvasPayload> {
     public static readonly ASSET_ID = 0;

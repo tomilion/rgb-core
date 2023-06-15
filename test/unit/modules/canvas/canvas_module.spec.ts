@@ -1,9 +1,9 @@
 import { codec, testing } from "lisk-sdk";
 import { Account } from "@liskhq/lisk-chain/dist-node/types";
 import { CanvasModule } from "../../../../src/app/modules/canvas/canvas_module";
-import { ActivePayload, activeSchema, canvasSchema, CanvasState, CompletePayload, completeSchema, PendingPayload, pendingSchema } from "../../../../src/app/modules/canvas/schemas";
+import { ActivePayload, activeSchema, canvasSchema, CanvasState, CompletePayload, completeSchema, drawPixelSchema, PendingPayload, pendingSchema } from "../../../../src/app/modules/canvas/schemas";
 import { numberBetween, randomBlock, randomCanvas, randomDrawPixel, randomTransaction } from "../../../utils/random_generator";
-import { DrawPixelAsset, drawPixelSchema } from "../../../../src/app/modules/canvas/assets/draw_pixel_asset";
+import { DrawPixelAsset } from "../../../../src/app/modules/canvas/assets/draw_pixel_asset";
 import { BaseModuleChannel } from "lisk-framework/dist-node/modules/base_module";
 
 describe("CanvasModuleModule", () => {

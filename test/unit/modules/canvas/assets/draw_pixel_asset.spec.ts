@@ -2,9 +2,9 @@ import { ReducerHandler } from "lisk-framework/dist-node/types";
 import { codec, testing } from "lisk-sdk";
 import { Account } from "@liskhq/lisk-chain/dist-node/types";
 import { when } from "jest-when";
-import { DrawPixelAsset, DrawPixelPayload } from '../../../../../src/app/modules/canvas/assets/draw_pixel_asset';
+import { DrawPixelAsset } from '../../../../../src/app/modules/canvas/assets/draw_pixel_asset';
 import { CanvasModule } from "../../../../../src/app/modules/canvas/canvas_module";
-import { accountSchema, CanvasPayload, canvasSchema, CanvasState } from "../../../../../src/app/modules/canvas/schemas";
+import { accountSchema, CanvasPayload, canvasSchema, CanvasState, DrawPixelPayload } from "../../../../../src/app/modules/canvas/schemas";
 import { numberBetween, randomCanvas } from "../../../../utils/random_generator";
 
 describe('DrawPixelAsset', () => {

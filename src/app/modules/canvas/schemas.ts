@@ -1,3 +1,23 @@
+export interface CreateCanvasPayload {
+    canvasId: number;
+    costPerPixel: bigint;
+    startBlockHeight: bigint;
+    endBlockHeight: bigint;
+    width: number;
+    height: number;
+    timeBetweenDraws: number;
+}
+
+export interface ChangeCanvasPayload {
+    canvasId: number;
+    costPerPixel?: bigint | null;
+    startBlockHeight?: bigint | null;
+    endBlockHeight?: bigint | null;
+    width?: number | null;
+    height?: number | null;
+    timeBetweenDraws?: number | null;
+}
+
 export enum CanvasState {
     PENDING = 0,
     ACTIVE = 1,
@@ -96,6 +116,24 @@ export const addressSchema = {
     },
 };
 
+export interface DrawPixelPayload {
+    canvasId: number;
+    coords: number;
+    colour: number;
+}
+
+export const drawPixelSchema = {
+    $id: "canvas/drawPixel/asset",
+    title: "DrawPixelAsset transaction asset for Canvas module",
+    type: "object",
+    required: ["canvasId", "coords", "colour"],
+    properties: {
+        canvasId: { fieldNumber: 1, dataType: "uint32" },
+        coords: { fieldNumber: 2, dataType: "uint32" },
+        colour: { fieldNumber: 3, dataType: "uint32" },
+    },
+};
+
 export interface CanvasAccount {
     canvas: { accountType: string }
 }
@@ -115,4 +153,21 @@ export interface CanvasResponse {
     height: number;
     timeBetweenDraws: number;
     state: number;
+}
+
+export interface CanvasId {
+    canvasId: number;
+}
+
+export interface PixelChangeSubmitted {
+    address: string;
+    transactionId: string;
+    pixel: DrawPixelPayload;
+}
+
+export interface PixelChangeCommitted {
+    address: string;
+    transactionId: string;
+    blockHeight: number;
+    pixel: DrawPixelPayload;
 }

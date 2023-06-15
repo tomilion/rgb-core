@@ -2,9 +2,9 @@ import { AfterBlockApplyContext, AfterGenesisBlockApplyContext, BaseModule, Befo
 import { strict as assert } from "assert";
 import { ChangeCanvasAsset } from "./assets/change_canvas_asset";
 import { CreateCanvasAsset } from "./assets/create_canvas_asset";
-import { DrawPixelAsset, DrawPixelPayload, drawPixelSchema } from "./assets/draw_pixel_asset";
+import { DrawPixelAsset } from "./assets/draw_pixel_asset";
 import { serialiseCanvasId } from "./utils";
-import { AccountType, ActivePayload, activeSchema, AddressPayload, addressSchema, CanvasAccount, CanvasPayload, CanvasResponse, canvasSchema, CanvasState, CompletePayload, completeSchema, PendingPayload, pendingSchema } from "./schemas";
+import { AccountType, ActivePayload, activeSchema, AddressPayload, addressSchema, CanvasAccount, CanvasId, CanvasPayload, CanvasResponse, canvasSchema, CanvasState, CompletePayload, completeSchema, DrawPixelPayload, drawPixelSchema, PendingPayload, pendingSchema } from "./schemas";
 
 export class CanvasModule extends BaseModule {
     public static readonly MODULE_ID = 1000;
@@ -158,7 +158,7 @@ export class CanvasModule extends BaseModule {
         }
     }
 
-    private async getCanvas(params: { canvasId: string }): Promise<CanvasResponse|null> {
+    private async getCanvas(params: CanvasId): Promise<CanvasResponse|null> {
         const canvasId = serialiseCanvasId(Number(params.canvasId));
         const canvasBuffer = await this._dataAccess.getChainState(canvasId);
 

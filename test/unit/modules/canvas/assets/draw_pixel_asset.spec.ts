@@ -2,40 +2,36 @@ import { ReducerHandler } from "lisk-framework/dist-node/types";
 import { codec, testing } from "lisk-sdk";
 import { Account } from "@liskhq/lisk-chain/dist-node/types";
 import { when } from "jest-when";
-import { DrawPixelAsset } from '../../../../../src/app/modules/canvas/assets/draw_pixel_asset';
+import { DrawPixelAsset } from "../../../../../src/app/modules/canvas/assets/draw_pixel_asset";
 import { CanvasModule } from "../../../../../src/app/modules/canvas/canvas_module";
 import { accountSchema, CanvasPayload, canvasSchema, CanvasState, DrawPixelPayload } from "../../../../../src/app/modules/canvas/schemas";
-import { numberBetween, randomCanvas } from "../../../../utils/random_generator";
+import { numberBetween, randomCanvas, randomCoordinate, randomDrawPixel } from "../../../../utils/random_generator";
 
-describe('DrawPixelAsset', () => {
+describe("DrawPixelAsset", () => {
     let mockAsset: DrawPixelPayload;
     let testClass: DrawPixelAsset;
 
     beforeEach(() => {
-        mockAsset = {
-            canvasId: numberBetween(0, 4294967295),
-            coords: numberBetween(0, 999999),
-            colour: numberBetween(0, 0xFFFFFF),
-        };
+        mockAsset = randomDrawPixel();
         testClass = new DrawPixelAsset();
     });
 
-    describe('constructor', () => {
-        it('should have valid id', () => {
+    describe("constructor", () => {
+        it("should have valid id", () => {
             expect(testClass.id).toEqual(5);
         });
 
-        it('should have valid name', () => {
-            expect(testClass.name).toEqual('drawPixel');
+        it("should have valid name", () => {
+            expect(testClass.name).toEqual("drawPixel");
         });
 
-        it('should have valid schema', () => {
+        it("should have valid schema", () => {
             expect(testClass.schema).toMatchSnapshot();
         });
     });
 
-    describe('validate', () => {
-        it('should pass with valid args', () => {
+    describe("validate", () => {
+        it("should pass with valid args", () => {
             const context = testing.createValidateAssetContext({
                 asset: mockAsset,
                 transaction: { senderAddress: Buffer.alloc(0) } as any,
@@ -43,40 +39,48 @@ describe('DrawPixelAsset', () => {
             testClass.validate(context);
         });
 
-        it('should throw coords below 0', () => {
+        it("should throw no colours provided", () => {
             const context = testing.createValidateAssetContext({
-                asset: {...mockAsset, coords: -1},
+                asset: { ...mockAsset, colours: new Uint8Array(0) },
                 transaction: { senderAddress: Buffer.alloc(0) } as any,
             });
-            expect(() => testClass.validate(context)).toThrow('Coords invalid');
+            expect(() => testClass.validate(context)).toThrow("Requires at least 1 colour");
         });
 
-        it('should throw coords above 10k grid', () => {
+        it("should throw too many colours provided", () => {
             const context = testing.createValidateAssetContext({
-                asset: {...mockAsset, coords: 10000 * 10000},
+                asset: { ...mockAsset, colours: new Uint8Array(51) },
                 transaction: { senderAddress: Buffer.alloc(0) } as any,
             });
-            expect(() => testClass.validate(context)).toThrow('Coords invalid');
+            expect(() => testClass.validate(context)).toThrow("Exceeded maximum number of colours");
         });
 
-        it('should throw colour below 0', () => {
+        it("should throw coords do not fit multiple of 24 bit", () => {
             const context = testing.createValidateAssetContext({
-                asset: {...mockAsset, colour: -1},
+                asset: { ...mockAsset, coords: new Uint8Array(4) },
                 transaction: { senderAddress: Buffer.alloc(0) } as any,
             });
-            expect(() => testClass.validate(context)).toThrow('Colour invalid');
+            expect(() => testClass.validate(context)).toThrow("Coords invalid");
         });
 
-        it('should throw colour above max supported encoding', () => {
+        it("should throw not enough coords for colours", () => {
             const context = testing.createValidateAssetContext({
-                asset: {...mockAsset, colour: 0x1000000},
+                asset: { ...mockAsset, coords: new Uint8Array(9), colours: new Uint8Array(3) },
                 transaction: { senderAddress: Buffer.alloc(0) } as any,
             });
-            expect(() => testClass.validate(context)).toThrow('Colour invalid');
+            expect(() => testClass.validate(context)).toThrow("Number of coords does not match number of colours");
+        });
+
+        it("should throw not enough colours for coords", () => {
+            const context = testing.createValidateAssetContext({
+                asset: { ...mockAsset, coords: new Uint8Array(9), colours: new Uint8Array(1) },
+                transaction: { senderAddress: Buffer.alloc(0) } as any,
+            });
+            expect(() => testClass.validate(context)).toThrow("Number of coords does not match number of colours");
         });
     });
 
-    describe('apply', () => {
+    describe("apply", () => {
         let account: Account;
         let chain: any;
         let canvas: CanvasPayload;
@@ -93,13 +97,11 @@ describe('DrawPixelAsset', () => {
             reducerHandler = testing.mocks.reducerHandlerMock;
         });
 
-        it('should update existing canvas account in state store', async () => {
-            const x = numberBetween(0, canvas.width - 1);
-            const y = numberBetween(0, canvas.height - 1);
+        it("should update existing canvas account in state store", async () => {
             const height = numberBetween(canvas.timeBetweenDraws, canvas.timeBetweenDraws + 100000);
             const lastBlockHeaders = [{ height: height - 1 }, { height: height }];
 
-            mockAsset.coords = x + (y * canvas.height);
+            mockAsset.coords = new Uint8Array(randomCoordinate(canvas.width, canvas.height));
             chain[`canvas-${mockAsset.canvasId}`] = codec.encode(canvasSchema, canvas);
             chain[`canvas-${mockAsset.canvasId}-account-${account.address.toString("hex")}`] = codec.encode(accountSchema, {
                 lastBlockHeight: height - canvas.timeBetweenDraws
@@ -116,8 +118,8 @@ describe('DrawPixelAsset', () => {
                 reducerHandler,
                 stateStore
             });
-            const setMock = jest.spyOn(stateStore.chain, 'set');
-            const invokeMock = jest.spyOn(reducerHandler, 'invoke');
+            const setMock = jest.spyOn(stateStore.chain, "set");
+            const invokeMock = jest.spyOn(reducerHandler, "invoke");
 
             when(invokeMock).calledWith("canvas:getLastBlockHeight").mockResolvedValue(height);
 
@@ -129,14 +131,12 @@ describe('DrawPixelAsset', () => {
             );
         });
 
-        it('should allow multiples draws to same block with timeBetweenDraws of zero', async () => {
-            const x = numberBetween(0, canvas.width - 1);
-            const y = numberBetween(0, canvas.height - 1);
+        it("should allow multiples draws to same block with timeBetweenDraws of zero", async () => {
             const height = numberBetween(100, 100000);
             const lastBlockHeaders = [{ height: height - 1 }, { height: height }];
             canvas.timeBetweenDraws = 0;
 
-            mockAsset.coords = x + (y * canvas.height);
+            mockAsset.coords = new Uint8Array(randomCoordinate(canvas.width, canvas.height));
             chain[`canvas-${mockAsset.canvasId}`] = codec.encode(canvasSchema, canvas);
             chain[`canvas-${mockAsset.canvasId}-account-${account.address.toString("hex")}`] = codec.encode(accountSchema, {
                 lastBlockHeight: height + 1
@@ -153,8 +153,8 @@ describe('DrawPixelAsset', () => {
                 reducerHandler,
                 stateStore
             });
-            const setMock = jest.spyOn(stateStore.chain, 'set');
-            const invokeMock = jest.spyOn(reducerHandler, 'invoke');
+            const setMock = jest.spyOn(stateStore.chain, "set");
+            const invokeMock = jest.spyOn(reducerHandler, "invoke");
 
             when(invokeMock).calledWith("canvas:getLastBlockHeight").mockResolvedValue(height);
 
@@ -166,7 +166,7 @@ describe('DrawPixelAsset', () => {
             );
         });
 
-        it('should throw canvas does not exist', async () => {
+        it("should throw canvas does not exist", async () => {
             const stateStore = new testing.mocks.StateStoreMock({
                 accounts: [account],
                 chain
@@ -181,7 +181,7 @@ describe('DrawPixelAsset', () => {
             await expect(testClass.apply(context)).rejects.toThrow("Canvas does not exist");
         });
 
-        it('should throw canvas not active', async () => {
+        it("should throw canvas not active", async () => {
             canvas.state = CanvasState.COMPLETE;
             chain[`canvas-${mockAsset.canvasId}`] = codec.encode(canvasSchema, canvas);
 
@@ -199,9 +199,10 @@ describe('DrawPixelAsset', () => {
             await expect(testClass.apply(context)).rejects.toThrow("Canvas not active");
         });
 
-        it('should throw coords out of bounds', async () => {
+        it("should throw coords out of bounds", async () => {
             chain[`canvas-${mockAsset.canvasId}`] = codec.encode(canvasSchema, canvas);
-            mockAsset.coords = canvas.width * canvas.height;
+            const coord = canvas.width * canvas.height;
+            mockAsset.coords = new Uint8Array([coord & 0xFF, (coord >> 8) & 0xFF, (coord >> 16) & 0xFF]);
 
             const stateStore = new testing.mocks.StateStoreMock({
                 accounts: [account],
@@ -217,13 +218,11 @@ describe('DrawPixelAsset', () => {
             await expect(testClass.apply(context)).rejects.toThrow("Coords invalid");
         });
 
-        it('should throw user not waited for draw timeout', async () => {
-            const x = numberBetween(0, canvas.width - 1);
-            const y = numberBetween(0, canvas.height - 1);
+        it("should throw user not waited for draw timeout", async () => {
             const height = numberBetween(canvas.timeBetweenDraws, canvas.timeBetweenDraws + 100000);
             const lastBlockHeaders = [{ height: height - 1 }, { height: height }];
 
-            mockAsset.coords = x + (y * canvas.height);
+            mockAsset.coords = new Uint8Array(randomCoordinate(canvas.width, canvas.height));
             chain[`canvas-${mockAsset.canvasId}`] = codec.encode(canvasSchema, canvas);
             chain[`canvas-${mockAsset.canvasId}-account-${account.address.toString("hex")}`] = codec.encode(accountSchema, {
                 lastBlockHeight: height - canvas.timeBetweenDraws + 2
@@ -240,7 +239,7 @@ describe('DrawPixelAsset', () => {
                 reducerHandler,
                 stateStore
             });
-            const invokeMock = jest.spyOn(reducerHandler, 'invoke');
+            const invokeMock = jest.spyOn(reducerHandler, "invoke");
 
             when(invokeMock).calledWith("canvas:getLastBlockHeight").mockResolvedValue(height);
 

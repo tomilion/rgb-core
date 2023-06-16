@@ -12,16 +12,26 @@ export class DrawPixelAsset extends BaseAsset<DrawPixelPayload> {
     public validate(context: ValidateAssetContext<DrawPixelPayload>): void {
         const { asset } = context;
 
-        // Sanity check that coords are within 10000 x 10000 grid
-        if (asset.coords < 0 || asset.coords >= 100000000)
+        if (asset.colours.length < 1)
+        {
+            throw new Error("Requires at least 1 colour");
+        }
+
+        // Max of 100 colours compressed into 4 bit colour encoding
+        if (asset.colours.length > 50)
+        {
+            throw new Error("Exceeded maximum number of colours");
+        }
+
+        // 24 bit coordinates (supports max canvas size of approx 4k * 4k)
+        if ((asset.coords.length % 3) > 0)
         {
             throw new Error("Coords invalid");
         }
 
-        // Only first 3 bytes should contain colour information
-        if (asset.colour < 0 || asset.colour > 0x00FFFFFF)
+        if(Math.ceil(asset.coords.length / 3 / 2) !== asset.colours.length)
         {
-            throw new Error("Colour invalid");
+            throw new Error("Number of coords does not match number of colours");
         }
     }
 
@@ -42,11 +52,17 @@ export class DrawPixelAsset extends BaseAsset<DrawPixelPayload> {
             throw new Error("Canvas not active");
         }
 
-        // Coords encoded as numbered position in canvas eg. (1, 1) in a 1000 x 1000 canvas would be encoded as (1001)
-        // as 0 -> 999 is y = 0 and 1000 -> 1999 is y = 1
-        if (asset.coords >= (canvas.width * canvas.height))
+        for (let i = 0; i < asset.coords.length; i += 3)
         {
-            throw new Error("Coords invalid");
+            // 24 bit coordinate packed with little endianness
+            const coord = asset.coords[i] | (asset.coords[i + 1] << 8) | (asset.coords[i + 2] << 16);
+
+            // Coords encoded as numbered position in canvas eg. (1, 1) in a 1000 x 1000 canvas would be encoded as (1001)
+            // where 0 -> 999 is y = 0 and 1000 -> 1999 is y = 1 (both cases x = {0 -> 999})
+            if (coord >= (canvas.width * canvas.height))
+            {
+                throw new Error("Coords invalid");
+            }
         }
 
         // Check user has waited for draw timeout before drawing again

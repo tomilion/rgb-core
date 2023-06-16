@@ -8,19 +8,23 @@ Object {
       "dataType": "uint32",
       "fieldNumber": 1,
     },
-    "colour": Object {
-      "dataType": "uint32",
+    "colours": Object {
+      "dataType": "bytes",
       "fieldNumber": 3,
+      "maxLength": 100,
+      "minLength": 1,
     },
     "coords": Object {
-      "dataType": "uint32",
+      "dataType": "bytes",
       "fieldNumber": 2,
+      "maxLength": 300,
+      "minLength": 3,
     },
   },
   "required": Array [
     "canvasId",
     "coords",
-    "colour",
+    "colours",
   ],
   "title": "DrawPixelAsset transaction asset for Canvas module",
   "type": "object",

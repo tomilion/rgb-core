@@ -1,6 +1,5 @@
 import { Block, Transaction } from "@liskhq/lisk-chain";
-import { CanvasPayload, CanvasState } from "../../src/app/modules/canvas/schemas";
-import { DrawPixelPayload } from "../../src/app/modules/canvas/assets/draw_pixel_asset";
+import { CanvasPayload, CanvasState, DrawPixelPayload } from "../../src/app/modules/canvas/schemas";
 
 export const numberBetween = (lower: number, upper: number): number => lower + Math.floor(Math.random() * (upper - lower));
 
@@ -33,10 +32,17 @@ export const randomCanvas = (overwrite = {}): CanvasPayload => {
 export const randomDrawPixel = (overwrite = {}): DrawPixelPayload => {
     return {
         canvasId: numberBetween(0, 10000),
-        coords: numberBetween(0, 10000),
-        colour: numberBetween(0, 0x00FFFFFF),
+        coords: new Uint8Array(randomCoordinate(1000, 1000)),
+        colours: new Uint8Array([numberBetween(0, 0xF)]),
         ...overwrite,
     };
+};
+
+export const randomCoordinate = (width: number, height: number): number[] => {
+    const x = numberBetween(0, width - 1);
+    const y = numberBetween(0, height - 1);
+    const coord = x + (y * height);
+    return [coord & 0xFF, (coord >> 8) & 0xFF, (coord >> 16) & 0xFF];
 };
 
 export const randomBlock = (overwriteHeader = {}, payload: Transaction[] = []): Block => {

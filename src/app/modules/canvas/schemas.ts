@@ -118,19 +118,19 @@ export const addressSchema = {
 
 export interface DrawPixelPayload {
     canvasId: number;
-    coords: number;
-    colour: number;
+    coords: Uint8Array;
+    colours: Uint8Array;
 }
 
 export const drawPixelSchema = {
     $id: "canvas/drawPixel/asset",
     title: "DrawPixelAsset transaction asset for Canvas module",
     type: "object",
-    required: ["canvasId", "coords", "colour"],
+    required: ["canvasId", "coords", "colours"],
     properties: {
         canvasId: { fieldNumber: 1, dataType: "uint32" },
-        coords: { fieldNumber: 2, dataType: "uint32" },
-        colour: { fieldNumber: 3, dataType: "uint32" },
+        coords: { fieldNumber: 2, dataType: "bytes", minLength: 3, maxLength: 300 },
+        colours: { fieldNumber: 3, dataType: "bytes", minLength: 1, maxLength: 50 },
     },
 };
 

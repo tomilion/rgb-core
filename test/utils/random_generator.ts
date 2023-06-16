@@ -24,6 +24,7 @@ export const randomCanvas = (overwrite = {}): CanvasPayload => {
         width: numberBetween(0, 10000),
         height: numberBetween(0, 10000),
         timeBetweenDraws: numberBetween(0, 4294967295),
+        colourPalette: new Uint8Array(48),
         state: CanvasState.ACTIVE,
         ...overwrite,
     };

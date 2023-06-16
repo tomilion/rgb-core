@@ -11,7 +11,7 @@ export class CreateCanvasAsset extends BaseAsset<CreateCanvasPayload> {
         $id: "canvas/createCanvas-asset",
         title: "CreateCanvasAsset transaction asset for canvas module",
         type: "object",
-        required: ["canvasId", "costPerPixel", "startBlockHeight", "endBlockHeight", "width", "height", "timeBetweenDraws"],
+        required: ["canvasId", "costPerPixel", "startBlockHeight", "endBlockHeight", "width", "height", "timeBetweenDraws", "colourPalette"],
         properties: {
             canvasId: { fieldNumber: 1, dataType: "uint32" },
             costPerPixel: { fieldNumber: 2, dataType: "uint64" },
@@ -20,6 +20,7 @@ export class CreateCanvasAsset extends BaseAsset<CreateCanvasPayload> {
             width: { fieldNumber: 5, dataType: "uint32" },
             height: { fieldNumber: 6, dataType: "uint32" },
             timeBetweenDraws: { fieldNumber: 7, dataType: "uint32" },
+            colourPalette: { fieldNumber: 8, dataType: "bytes", minLength: 48, maxLength: 48 },
         },
     };
 
@@ -55,6 +56,11 @@ export class CreateCanvasAsset extends BaseAsset<CreateCanvasPayload> {
         {
             throw new Error("End block height must be greater than start block height");
         }
+
+        if (asset.colourPalette.length !== 48)
+        {
+            throw new Error("Colour palette invalid");
+        }
     }
 
     public async apply(context: ApplyAssetContext<CreateCanvasPayload>): Promise<void> {
@@ -83,6 +89,7 @@ export class CreateCanvasAsset extends BaseAsset<CreateCanvasPayload> {
             width: asset.width,
             height: asset.height,
             timeBetweenDraws: asset.timeBetweenDraws,
+            colourPalette: asset.colourPalette,
         };
         await stateStore.chain.set(canvasId, codec.encode(canvasSchema, canvas));
 

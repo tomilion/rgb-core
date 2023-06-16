@@ -20,39 +20,36 @@ export class ChangeCanvasAsset extends BaseAsset<ChangeCanvasPayload> {
             width: { fieldNumber: 5, dataType: "uint32" },
             height: { fieldNumber: 6, dataType: "uint32" },
             timeBetweenDraws: { fieldNumber: 7, dataType: "uint32" },
+            colourPalette: { fieldNumber: 8, dataType: "bytes", minLength: 48, maxLength: 48 },
         },
     };
 
     public validate(context: ValidateAssetContext<ChangeCanvasPayload>): void {
         const { asset, header } = context;
 
-        if ((asset.width !== undefined && asset.width !== null) && (asset.width < 0 || asset.width > 10000))
+        if (asset.width !== undefined && asset.width !== null && (asset.width < 0 || asset.width > 10000))
         {
             throw new Error("Width invalid");
         }
 
-        if ((asset.height !== undefined && asset.height !== null) && (asset.height < 0 || asset.height > 10000))
+        if (asset.height !== undefined && asset.height !== null && (asset.height < 0 || asset.height > 10000))
         {
             throw new Error("Height invalid");
         }
 
-        if ((asset.costPerPixel !== undefined && asset.costPerPixel !== null) && (asset.costPerPixel < 0))
+        if (asset.costPerPixel !== undefined && asset.costPerPixel !== null && asset.costPerPixel < 0)
         {
             throw new Error("Cost per pixel invalid");
         }
 
         // Checking undefined/null inline because storing condition in variable is too complex for linter ...
-        if (asset.startBlockHeight !== undefined &&
-            asset.startBlockHeight !== null &&
-            asset.startBlockHeight < header.height)
+        if (asset.startBlockHeight !== undefined && asset.startBlockHeight !== null && asset.startBlockHeight < header.height)
         {
             throw new Error("Start block height cannot be in the past");
         }
 
         // Checking undefined/null inline because storing condition in variable is too complex for linter ...
-        if (asset.endBlockHeight !== undefined &&
-            asset.endBlockHeight !== null &&
-            asset.endBlockHeight < header.height)
+        if (asset.endBlockHeight !== undefined && asset.endBlockHeight !== null && asset.endBlockHeight < header.height)
         {
             throw new Error("End block height cannot be in the past");
         }
@@ -65,6 +62,11 @@ export class ChangeCanvasAsset extends BaseAsset<ChangeCanvasPayload> {
             asset.endBlockHeight < asset.startBlockHeight)
         {
             throw new Error("End block height must be greater than start block height");
+        }
+
+        if (asset.colourPalette !== undefined && asset.colourPalette !== null && asset.colourPalette.length !== 48)
+        {
+            throw new Error("Colour palette invalid");
         }
     }
 
@@ -109,6 +111,7 @@ export class ChangeCanvasAsset extends BaseAsset<ChangeCanvasPayload> {
         canvas.startBlockHeight = asset.startBlockHeight ?? canvas.startBlockHeight;
         canvas.endBlockHeight = asset.endBlockHeight ?? canvas.endBlockHeight;
         canvas.timeBetweenDraws = asset.timeBetweenDraws ?? canvas.timeBetweenDraws;
+        canvas.colourPalette = asset.colourPalette ?? canvas.colourPalette;
 
         if (canvas.startBlockHeight > canvas.endBlockHeight)
         {

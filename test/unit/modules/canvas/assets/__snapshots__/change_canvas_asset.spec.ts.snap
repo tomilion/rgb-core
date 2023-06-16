@@ -8,6 +8,12 @@ Object {
       "dataType": "uint32",
       "fieldNumber": 1,
     },
+    "colourPalette": Object {
+      "dataType": "bytes",
+      "fieldNumber": 8,
+      "maxLength": 48,
+      "minLength": 48,
+    },
     "costPerPixel": Object {
       "dataType": "uint64",
       "fieldNumber": 2,

@@ -6,6 +6,7 @@ export interface CreateCanvasPayload {
     width: number;
     height: number;
     timeBetweenDraws: number;
+    colourPalette: Uint8Array;
 }
 
 export interface ChangeCanvasPayload {
@@ -16,6 +17,7 @@ export interface ChangeCanvasPayload {
     width?: number | null;
     height?: number | null;
     timeBetweenDraws?: number | null;
+    colourPalette?: Uint8Array | null;
 }
 
 export enum CanvasState {
@@ -32,6 +34,7 @@ export interface CanvasPayload {
     width: number;
     height: number;
     timeBetweenDraws: number;
+    colourPalette: Uint8Array;
     state: number;
 }
 
@@ -47,7 +50,8 @@ export const canvasSchema = {
         width: { fieldNumber: 5, dataType: "uint32" },
         height: { fieldNumber: 6, dataType: "uint32" },
         timeBetweenDraws: { fieldNumber: 7, dataType: "uint32" },
-        state: { fieldNumber: 8, dataType: "uint32", default: CanvasState.PENDING },
+        colourPalette: { fieldNumber: 8, dataType: "bytes", minLength: 48, maxLength: 48 },
+        state: { fieldNumber: 9, dataType: "uint32", default: CanvasState.PENDING },
     },
 };
 

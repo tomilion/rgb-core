@@ -19,6 +19,7 @@ describe("CreateCanvasAsset", () => {
             width: numberBetween(0, 10000),
             height: numberBetween(0, 10000),
             timeBetweenDraws: numberBetween(0, 4294967295),
+            colourPalette: new Uint8Array(48),
         };
         testClass = new CreateCanvasAsset();
     });
@@ -48,7 +49,7 @@ describe("CreateCanvasAsset", () => {
 
         it("should throw width below 0", () => {
             const context = testing.createValidateAssetContext({
-                asset: { ...mockAsset, width: -1},
+                asset: { ...mockAsset, width: -1 },
                 transaction: { } as any,
             });
             expect(() => testClass.validate(context)).toThrow("Width invalid");
@@ -56,7 +57,7 @@ describe("CreateCanvasAsset", () => {
 
         it("should throw width above 10000", () => {
             const context = testing.createValidateAssetContext({
-                asset: { ...mockAsset, width: 10001},
+                asset: { ...mockAsset, width: 10001 },
                 transaction: { } as any,
             });
             expect(() => testClass.validate(context)).toThrow("Width invalid");
@@ -64,7 +65,7 @@ describe("CreateCanvasAsset", () => {
 
         it("should throw height below 0", () => {
             const context = testing.createValidateAssetContext({
-                asset: { ...mockAsset, height: -1},
+                asset: { ...mockAsset, height: -1 },
                 transaction: { } as any,
             });
             expect(() => testClass.validate(context)).toThrow("Height invalid");
@@ -72,7 +73,7 @@ describe("CreateCanvasAsset", () => {
 
         it("should throw height above 10000", () => {
             const context = testing.createValidateAssetContext({
-                asset: { ...mockAsset, height: 10001},
+                asset: { ...mockAsset, height: 10001 },
                 transaction: { } as any,
             });
             expect(() => testClass.validate(context)).toThrow("Height invalid");
@@ -80,7 +81,7 @@ describe("CreateCanvasAsset", () => {
 
         it("should throw cost per pixel below 0", () => {
             const context = testing.createValidateAssetContext({
-                asset: { ...mockAsset, costPerPixel: BigInt(-1)},
+                asset: { ...mockAsset, costPerPixel: BigInt(-1) },
                 transaction: { } as any,
             });
             expect(() => testClass.validate(context)).toThrow("Cost per pixel invalid");
@@ -88,7 +89,7 @@ describe("CreateCanvasAsset", () => {
 
         it("should throw start block height in past", () => {
             const context = testing.createValidateAssetContext({
-                asset: { ...mockAsset, startBlockHeight: BigInt(10000), endBlockHeight: BigInt(20000)},
+                asset: { ...mockAsset, startBlockHeight: BigInt(10000), endBlockHeight: BigInt(20000) },
                 transaction: { } as any,
             });
             context.header = { height: 10001 } as any;
@@ -97,7 +98,7 @@ describe("CreateCanvasAsset", () => {
 
         it("should throw end block height in past", () => {
             const context = testing.createValidateAssetContext({
-                asset: { ...mockAsset, startBlockHeight: BigInt(20000), endBlockHeight: BigInt(10000)},
+                asset: { ...mockAsset, startBlockHeight: BigInt(20000), endBlockHeight: BigInt(10000) },
                 transaction: { } as any,
             });
             context.header = { height: 10001 } as any;
@@ -106,10 +107,18 @@ describe("CreateCanvasAsset", () => {
 
         it("should throw start block height above end block height", () => {
             const context = testing.createValidateAssetContext({
-                asset: { ...mockAsset, startBlockHeight: BigInt(10001), endBlockHeight: BigInt(10000)},
+                asset: { ...mockAsset, startBlockHeight: BigInt(10001), endBlockHeight: BigInt(10000) },
                 transaction: { } as any,
             });
             expect(() => testClass.validate(context)).toThrow("End block height must be greater than start block height");
+        });
+
+        it("should throw invalid colour palette size", () => {
+            const context = testing.createValidateAssetContext({
+                asset: { ...mockAsset, colourPalette: new Uint8Array(47) },
+                transaction: { } as any,
+            });
+            expect(() => testClass.validate(context)).toThrow("Colour palette invalid");
         });
     });
 
@@ -169,6 +178,7 @@ describe("CreateCanvasAsset", () => {
                     width: mockAsset.width,
                     height: mockAsset.height,
                     timeBetweenDraws: mockAsset.timeBetweenDraws,
+                    colourPalette: mockAsset.colourPalette,
                 })
             );
             expect(stateStore.chain.set).toHaveBeenCalledWith(
@@ -211,6 +221,7 @@ describe("CreateCanvasAsset", () => {
                     width: mockAsset.width,
                     height: mockAsset.height,
                     timeBetweenDraws: mockAsset.timeBetweenDraws,
+                    colourPalette: mockAsset.colourPalette,
                 })
             );
             expect(stateStore.chain.set).toHaveBeenCalledWith(

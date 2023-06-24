@@ -126,6 +126,12 @@ export interface DrawPixelPayload {
     colours: Uint8Array;
 }
 
+export interface DrawPixelPayloadJSON {
+    canvasId: number;
+    coords: string;
+    colours: string;
+}
+
 export const drawPixelSchema = {
     $id: "canvas/drawPixel/asset",
     title: "DrawPixelAsset transaction asset for Canvas module",
@@ -159,19 +165,19 @@ export interface CanvasResponse {
     state: number;
 }
 
-export interface CanvasId {
+export type CanvasId = {
     canvasId: number;
-}
+};
 
-export interface PixelChangeSubmitted {
+export type PixelChangeSubmitted = {
     address: string;
     transactionId: string;
     pixel: DrawPixelPayload;
-}
+};
 
-export interface PixelChangeCommitted {
+export type PixelChangeCommitted = {
     address: string;
     transactionId: string;
     blockHeight: number;
     pixel: DrawPixelPayload;
-}
+};

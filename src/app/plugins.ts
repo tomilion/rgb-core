@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { Application } from "lisk-sdk";
-import { PixelPlugin } from "./plugins/pixel/pixel_plugin";
+import { ViewPlugin } from "./plugins/view/view_plugin";
 
 export const registerPlugins = (app: Application): void => {
-    if ("pixel" in app.config.plugins)
+    if (ViewPlugin.alias in app.config.plugins)
     {
-        app.registerPlugin(PixelPlugin);
+        app.registerPlugin(ViewPlugin);
     }
 };

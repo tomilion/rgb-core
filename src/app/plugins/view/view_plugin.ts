@@ -1,5 +1,5 @@
 import { BaseChannel, EventsDefinition, ActionsDefinition, SchemaWithDefault, BasePlugin, PluginInfo } from "lisk-sdk";
-import { ActivePayload, CanvasId, CanvasResponse, DrawPixelPayload, DrawPixelPayloadJSON, PixelChangeCommitted, PixelChangeSubmitted } from "../../modules/canvas/schemas";
+import { ActivePayload, CanvasId, CanvasResponse, DrawPixelPayloadJSON, PixelChangeCommitted, PixelChangeSubmitted } from "../../modules/canvas/schemas";
 import { DrawPixelAsset } from "../../modules/canvas/assets/draw_pixel_asset";
 import { CanvasModule } from "../../modules/canvas/canvas_module";
 
@@ -14,8 +14,8 @@ interface ViewCache {
 
 interface ViewChanged {
     canvasId: number;
-    coords: Uint8Array;
-    colours: Uint8Array;
+    coords: string;
+    colours: string;
 }
 
 interface Submitted {
@@ -133,6 +133,12 @@ export class ViewPlugin extends BasePlugin {
                 this.submitted[pixelChange.pixel.canvasId] = {};
             }
 
+            // Discarding replayed events
+            if (pixelChange.transactionId in this.submitted[pixelChange.pixel.canvasId])
+            {
+                return;
+            }
+
             this.submitted[pixelChange.pixel.canvasId][pixelChange.transactionId] = pixelChange;
 
             // Cache not initialised for canvas so assuming load hasn't completed yet
@@ -156,20 +162,22 @@ export class ViewPlugin extends BasePlugin {
         channel.subscribe("canvas:pixelChangeCommitted", async (data?: Record<string, unknown>) => {
             const pixelChange = data as PixelChangeCommitted;
 
-            if (!(pixelChange.pixel.canvasId in this.committed))
-            {
-                this.committed[pixelChange.pixel.canvasId] = [];
-            }
-
-            this.committed[pixelChange.pixel.canvasId].push(pixelChange);
-
             // Cache not initialised for canvas so assuming load hasn't completed yet
             if (!(pixelChange.pixel.canvasId in this.views))
             {
+                if (!(pixelChange.pixel.canvasId in this.committed))
+                {
+                    this.committed[pixelChange.pixel.canvasId] = [];
+                }
+
+                this.committed[pixelChange.pixel.canvasId].push(pixelChange);
                 return;
             }
 
-            delete this.submitted[pixelChange.pixel.canvasId][pixelChange.transactionId];
+            if (pixelChange.pixel.canvasId in this.submitted && pixelChange.transactionId in this.submitted[pixelChange.pixel.canvasId])
+            {
+                delete this.submitted[pixelChange.pixel.canvasId][pixelChange.transactionId];
+            }
 
             const coords: number[] = [];
             const colours: number[] = [];
@@ -237,6 +245,42 @@ export class ViewPlugin extends BasePlugin {
                 this.diffView(canvasId, coords, colours);
             }
         }
+
+        if (canvasId in this.committed)
+        {
+            const coords: number[] = [];
+            const colours: number[] = [];
+
+            for (const committed of this.committed[canvasId])
+            {
+                if (canvasId in this.submitted && committed.transactionId in this.submitted[canvasId])
+                {
+                    delete this.submitted[canvasId][committed.transactionId];
+                }
+
+                coords.concat(ViewPlugin.deserialiseCoords(committed.pixel.coords));
+                colours.concat(ViewPlugin.deserialiseColours(committed.pixel.colours));
+            }
+
+            this.diffView(canvasId, coords, colours);
+            delete this.committed[canvasId];
+        }
+
+        if (canvasId in this.submitted)
+        {
+            const coords: number[] = [];
+            const colours: number[] = [];
+
+            for (const key in this.submitted[canvasId])
+            {
+                const submitted = this.submitted[canvasId][key];
+                coords.concat(ViewPlugin.deserialiseCoords(submitted.pixel.coords));
+                colours.concat(ViewPlugin.deserialiseColours(submitted.pixel.colours));
+            }
+
+            this.diffView(canvasId, coords, colours);
+            delete this.submitted[canvasId];
+        }
     }
 
     private diffView(canvasId: number, coords: number[], colours: number[]): ViewChanged {
@@ -271,8 +315,8 @@ export class ViewPlugin extends BasePlugin {
 
         return {
             canvasId: canvasId,
-            coords: ViewPlugin.serialiseCoords(modifiedCoords),
-            colours: ViewPlugin.serialiseColours(modifiedColours),
+            coords: Buffer.from(ViewPlugin.serialiseCoords(modifiedCoords)).toString("hex"),
+            colours: Buffer.from(ViewPlugin.serialiseColours(modifiedColours)).toString("hex"),
         };
     }
 

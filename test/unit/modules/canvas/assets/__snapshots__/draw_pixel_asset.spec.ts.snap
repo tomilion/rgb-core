@@ -11,13 +11,13 @@ Object {
     "colours": Object {
       "dataType": "bytes",
       "fieldNumber": 3,
-      "maxLength": 100,
+      "maxLength": 5000,
       "minLength": 1,
     },
     "coords": Object {
       "dataType": "bytes",
       "fieldNumber": 2,
-      "maxLength": 300,
+      "maxLength": 30000,
       "minLength": 3,
     },
   },

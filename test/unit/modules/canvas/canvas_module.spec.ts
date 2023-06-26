@@ -51,6 +51,7 @@ describe("CanvasModuleModule", () => {
                     costPerPixel: Number(canvas.costPerPixel),
                     startBlockHeight: Number(canvas.startBlockHeight),
                     endBlockHeight: Number(canvas.endBlockHeight),
+                    colourPalette: canvas.colourPalette.toString("hex"),
                 };
                 expect(result).toEqual(expected);
             });
@@ -486,7 +487,11 @@ describe("CanvasModuleModule", () => {
                     address: payload[3].senderAddress.toString("hex"),
                     transactionId: payload[3].id.toString("hex"),
                     blockHeight: height,
-                    pixel: drawPixelAssets[0],
+                    pixel: {
+                        ...drawPixelAssets[0],
+                        coords: Buffer.from(drawPixelAssets[0].coords),
+                        colours: Buffer.from(drawPixelAssets[0].colours),
+                    },
                 }
             );
             expect(publishMock).toHaveBeenCalledWith(
@@ -495,7 +500,11 @@ describe("CanvasModuleModule", () => {
                     address: payload[4].senderAddress.toString("hex"),
                     transactionId: payload[4].id.toString("hex"),
                     blockHeight: height,
-                    pixel: drawPixelAssets[1],
+                    pixel: {
+                        ...drawPixelAssets[1],
+                        coords: Buffer.from(drawPixelAssets[1].coords),
+                        colours: Buffer.from(drawPixelAssets[1].colours),
+                    },
                 }
             );
         });
@@ -530,7 +539,11 @@ describe("CanvasModuleModule", () => {
                 {
                     address: transaction.senderAddress.toString("hex"),
                     transactionId: transaction.id.toString("hex"),
-                    pixel: drawPixelAsset,
+                    pixel: {
+                        ...drawPixelAsset,
+                        coords: Buffer.from(drawPixelAsset.coords),
+                        colours: Buffer.from(drawPixelAsset.colours),
+                    },
                 }
             );
         });

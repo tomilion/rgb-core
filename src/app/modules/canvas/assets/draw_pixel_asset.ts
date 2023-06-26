@@ -17,19 +17,13 @@ export class DrawPixelAsset extends BaseAsset<DrawPixelPayload> {
             throw new Error("Requires at least 1 colour");
         }
 
-        // Max of 100 colours compressed into 4 bit colour encoding
-        if (asset.colours.length > 50)
-        {
-            throw new Error("Exceeded maximum number of colours");
-        }
-
         // 24 bit coordinates (supports max canvas size of approx 4k * 4k)
         if ((asset.coords.length % 3) > 0)
         {
             throw new Error("Coords invalid");
         }
 
-        if(Math.ceil(asset.coords.length / 3 / 2) !== asset.colours.length)
+        if (Math.ceil(asset.coords.length / 3 / 2) !== asset.colours.length)
         {
             throw new Error("Number of coords does not match number of colours");
         }
@@ -50,6 +44,11 @@ export class DrawPixelAsset extends BaseAsset<DrawPixelPayload> {
         if (canvas.state !== CanvasState.ACTIVE)
         {
             throw new Error("Canvas not active");
+        }
+
+        if ((asset.coords.length / 3) > canvas.maxPixelsPerTransaction)
+        {
+            throw new Error("Too many pixels");
         }
 
         for (let i = 0; i < asset.coords.length; i += 3)

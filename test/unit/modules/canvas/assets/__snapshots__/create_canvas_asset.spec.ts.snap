@@ -26,6 +26,10 @@ Object {
       "dataType": "uint32",
       "fieldNumber": 6,
     },
+    "maxPixelsPerTransaction": Object {
+      "dataType": "uint32",
+      "fieldNumber": 9,
+    },
     "startBlockHeight": Object {
       "dataType": "uint64",
       "fieldNumber": 3,
@@ -48,6 +52,7 @@ Object {
     "height",
     "timeBetweenDraws",
     "colourPalette",
+    "maxPixelsPerTransaction",
   ],
   "title": "CreateCanvasAsset transaction asset for canvas module",
   "type": "object",

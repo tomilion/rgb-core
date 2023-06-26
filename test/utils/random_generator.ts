@@ -21,10 +21,11 @@ export const randomCanvas = (overwrite = {}): CanvasPayload => {
         costPerPixel: BigInt(numberBetween(0, 4294967295)),
         startBlockHeight: BigInt(numberBetween(0, 1000000)),
         endBlockHeight: BigInt(numberBetween(1000001, 2000000)),
-        width: numberBetween(0, 10000),
-        height: numberBetween(0, 10000),
+        width: numberBetween(1, 10000),
+        height: numberBetween(1, 10000),
         timeBetweenDraws: numberBetween(0, 4294967295),
-        colourPalette: new Uint8Array(48),
+        colourPalette: Buffer.from(new Uint8Array(48)),
+        maxPixelsPerTransaction: numberBetween(1, 10000),
         state: CanvasState.ACTIVE,
         ...overwrite,
     };
@@ -33,8 +34,8 @@ export const randomCanvas = (overwrite = {}): CanvasPayload => {
 export const randomDrawPixel = (overwrite = {}): DrawPixelPayload => {
     return {
         canvasId: numberBetween(0, 10000),
-        coords: new Uint8Array(randomCoordinate(1000, 1000)),
-        colours: new Uint8Array([numberBetween(0, 0xF)]),
+        coords: Buffer.from(new Uint8Array(randomCoordinate(1000, 1000))),
+        colours: Buffer.from(new Uint8Array([numberBetween(0, 0xF)])),
         ...overwrite,
     };
 };

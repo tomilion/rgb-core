@@ -6,7 +6,8 @@ export interface CreateCanvasPayload {
     width: number;
     height: number;
     timeBetweenDraws: number;
-    colourPalette: Uint8Array;
+    colourPalette: Buffer;
+    maxPixelsPerTransaction: number;
 }
 
 export interface ChangeCanvasPayload {
@@ -17,7 +18,8 @@ export interface ChangeCanvasPayload {
     width?: number | null;
     height?: number | null;
     timeBetweenDraws?: number | null;
-    colourPalette?: Uint8Array | null;
+    colourPalette?: Buffer | null;
+    maxPixelsPerTransaction?: number | null;
 }
 
 export enum CanvasState {
@@ -34,14 +36,15 @@ export interface CanvasPayload {
     width: number;
     height: number;
     timeBetweenDraws: number;
-    colourPalette: Uint8Array;
+    colourPalette: Buffer;
+    maxPixelsPerTransaction: number;
     state: number;
 }
 
 export const canvasSchema = {
     $id: "canvas/canvas",
     type: "object",
-    required: ["ownerId", "costPerPixel", "startBlockHeight", "endBlockHeight", "width", "height", "timeBetweenDraws"],
+    required: ["ownerId", "costPerPixel", "startBlockHeight", "endBlockHeight", "width", "height", "timeBetweenDraws", "colourPalette", "maxPixelsPerTransaction"],
     properties: {
         ownerId: { fieldNumber: 1, dataType: "bytes", minLength: 20, maxLength: 20 },
         costPerPixel: { fieldNumber: 2, dataType: "uint64" },
@@ -51,7 +54,8 @@ export const canvasSchema = {
         height: { fieldNumber: 6, dataType: "uint32" },
         timeBetweenDraws: { fieldNumber: 7, dataType: "uint32" },
         colourPalette: { fieldNumber: 8, dataType: "bytes", minLength: 48, maxLength: 48 },
-        state: { fieldNumber: 9, dataType: "uint32", default: CanvasState.PENDING },
+        maxPixelsPerTransaction: { fieldNumber: 9, dataType: "uint32" },
+        state: { fieldNumber: 10, dataType: "uint32", default: CanvasState.PENDING },
     },
 };
 
@@ -122,8 +126,8 @@ export const addressSchema = {
 
 export interface DrawPixelPayload {
     canvasId: number;
-    coords: Uint8Array;
-    colours: Uint8Array;
+    coords: Buffer;
+    colours: Buffer;
 }
 
 export interface DrawPixelPayloadJSON {
@@ -139,8 +143,8 @@ export const drawPixelSchema = {
     required: ["canvasId", "coords", "colours"],
     properties: {
         canvasId: { fieldNumber: 1, dataType: "uint32" },
-        coords: { fieldNumber: 2, dataType: "bytes", minLength: 3, maxLength: 300 },
-        colours: { fieldNumber: 3, dataType: "bytes", minLength: 1, maxLength: 50 },
+        coords: { fieldNumber: 2, dataType: "bytes", minLength: 3, maxLength: 30000 },
+        colours: { fieldNumber: 3, dataType: "bytes", minLength: 1, maxLength: 5000 },
     },
 };
 
@@ -162,6 +166,8 @@ export interface CanvasResponse {
     width: number;
     height: number;
     timeBetweenDraws: number;
+    colourPalette: string;
+    maxPixelsPerTransaction: number;
     state: number;
 }
 

@@ -174,6 +174,7 @@ export class CanvasModule extends BaseModule {
             costPerPixel: Number(canvas.costPerPixel),
             startBlockHeight: Number(canvas.startBlockHeight),
             endBlockHeight: Number(canvas.endBlockHeight),
+            colourPalette: canvas.colourPalette.toString("hex"),
         };
     }
 

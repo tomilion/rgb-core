@@ -11,7 +11,7 @@ export class CreateCanvasAsset extends BaseAsset<CreateCanvasPayload> {
         $id: "canvas/createCanvas-asset",
         title: "CreateCanvasAsset transaction asset for canvas module",
         type: "object",
-        required: ["canvasId", "costPerPixel", "startBlockHeight", "endBlockHeight", "width", "height", "timeBetweenDraws", "colourPalette"],
+        required: ["canvasId", "costPerPixel", "startBlockHeight", "endBlockHeight", "width", "height", "timeBetweenDraws", "colourPalette", "maxPixelsPerTransaction"],
         properties: {
             canvasId: { fieldNumber: 1, dataType: "uint32" },
             costPerPixel: { fieldNumber: 2, dataType: "uint64" },
@@ -21,18 +21,19 @@ export class CreateCanvasAsset extends BaseAsset<CreateCanvasPayload> {
             height: { fieldNumber: 6, dataType: "uint32" },
             timeBetweenDraws: { fieldNumber: 7, dataType: "uint32" },
             colourPalette: { fieldNumber: 8, dataType: "bytes", minLength: 48, maxLength: 48 },
+            maxPixelsPerTransaction: { fieldNumber: 9, dataType: "uint32" },
         },
     };
 
     public validate(context: ValidateAssetContext<CreateCanvasPayload>): void {
         const { asset, header } = context;
 
-        if (asset.width < 0 || asset.width > 10000)
+        if (asset.width < 1 || asset.width > 10000)
         {
             throw new Error("Width invalid");
         }
 
-        if (asset.height < 0 || asset.height > 10000)
+        if (asset.height < 1 || asset.height > 10000)
         {
             throw new Error("Height invalid");
         }
@@ -55,6 +56,11 @@ export class CreateCanvasAsset extends BaseAsset<CreateCanvasPayload> {
         if (asset.startBlockHeight > asset.endBlockHeight)
         {
             throw new Error("End block height must be greater than start block height");
+        }
+
+        if (asset.maxPixelsPerTransaction < 1 || asset.maxPixelsPerTransaction > 10000)
+        {
+            throw new Error("Max pixels per transaction invalid");
         }
 
         if (asset.colourPalette.length !== 48)
@@ -90,6 +96,7 @@ export class CreateCanvasAsset extends BaseAsset<CreateCanvasPayload> {
             height: asset.height,
             timeBetweenDraws: asset.timeBetweenDraws,
             colourPalette: asset.colourPalette,
+            maxPixelsPerTransaction: asset.maxPixelsPerTransaction,
         };
         await stateStore.chain.set(canvasId, codec.encode(canvasSchema, canvas));
 

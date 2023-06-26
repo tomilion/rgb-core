@@ -19,7 +19,8 @@ describe("ChangeCanvasAsset", () => {
             width: numberBetween(0, 10000),
             height: numberBetween(0, 10000),
             timeBetweenDraws: numberBetween(0, 4294967295),
-            colourPalette: new Uint8Array(48),
+            maxPixelsPerTransaction: numberBetween(1, 10000),
+            colourPalette: Buffer.from(new Uint8Array(48)),
         };
         testClass = new ChangeCanvasAsset();
     });
@@ -113,9 +114,25 @@ describe("ChangeCanvasAsset", () => {
             expect(() => testClass.validate(context)).toThrow("End block height must be greater than start block height");
         });
 
+        it("should throw max pixels per transaction below 1", () => {
+            const context = testing.createValidateAssetContext({
+                asset: { canvasId: mockAsset.canvasId, maxPixelsPerTransaction: 0 },
+                transaction: { senderAddress: mockUser } as any,
+            });
+            expect(() => testClass.validate(context)).toThrow("Max pixels per transaction invalid");
+        });
+
+        it("should throw max pixels per transaction above 10000", () => {
+            const context = testing.createValidateAssetContext({
+                asset: { canvasId: mockAsset.canvasId, maxPixelsPerTransaction: 10001 },
+                transaction: { senderAddress: mockUser } as any,
+            });
+            expect(() => testClass.validate(context)).toThrow("Max pixels per transaction invalid");
+        });
+
         it("should throw invalid colour palette size", () => {
             const context = testing.createValidateAssetContext({
-                asset: { ...mockAsset, colourPalette: new Uint8Array(47) },
+                asset: { ...mockAsset, colourPalette: Buffer.from(new Uint8Array(47)) },
                 transaction: { } as any,
             });
             expect(() => testClass.validate(context)).toThrow("Colour palette invalid");
@@ -158,6 +175,7 @@ describe("ChangeCanvasAsset", () => {
                     height: mockAsset.height,
                     timeBetweenDraws: mockAsset.timeBetweenDraws,
                     colourPalette: mockAsset.colourPalette,
+                    maxPixelsPerTransaction: mockAsset.maxPixelsPerTransaction,
                     state: CanvasState.PENDING,
                 })
             );

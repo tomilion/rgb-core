@@ -41,23 +41,15 @@ describe("DrawPixelAsset", () => {
 
         it("should throw no colours provided", () => {
             const context = testing.createValidateAssetContext({
-                asset: { ...mockAsset, colours: new Uint8Array(0) },
+                asset: { ...mockAsset, colours: Buffer.from(new Uint8Array(0)) },
                 transaction: { senderAddress: Buffer.alloc(0) } as any,
             });
             expect(() => testClass.validate(context)).toThrow("Requires at least 1 colour");
         });
 
-        it("should throw too many colours provided", () => {
-            const context = testing.createValidateAssetContext({
-                asset: { ...mockAsset, colours: new Uint8Array(51) },
-                transaction: { senderAddress: Buffer.alloc(0) } as any,
-            });
-            expect(() => testClass.validate(context)).toThrow("Exceeded maximum number of colours");
-        });
-
         it("should throw coords do not fit multiple of 24 bit", () => {
             const context = testing.createValidateAssetContext({
-                asset: { ...mockAsset, coords: new Uint8Array(4) },
+                asset: { ...mockAsset, coords: Buffer.from(new Uint8Array(4)) },
                 transaction: { senderAddress: Buffer.alloc(0) } as any,
             });
             expect(() => testClass.validate(context)).toThrow("Coords invalid");
@@ -65,7 +57,7 @@ describe("DrawPixelAsset", () => {
 
         it("should throw not enough coords for colours", () => {
             const context = testing.createValidateAssetContext({
-                asset: { ...mockAsset, coords: new Uint8Array(9), colours: new Uint8Array(3) },
+                asset: { ...mockAsset, coords: Buffer.from(new Uint8Array(9)), colours: Buffer.from(new Uint8Array(3)) },
                 transaction: { senderAddress: Buffer.alloc(0) } as any,
             });
             expect(() => testClass.validate(context)).toThrow("Number of coords does not match number of colours");
@@ -73,7 +65,7 @@ describe("DrawPixelAsset", () => {
 
         it("should throw not enough colours for coords", () => {
             const context = testing.createValidateAssetContext({
-                asset: { ...mockAsset, coords: new Uint8Array(9), colours: new Uint8Array(1) },
+                asset: { ...mockAsset, coords: Buffer.from(new Uint8Array(9)), colours: Buffer.from(new Uint8Array(1)) },
                 transaction: { senderAddress: Buffer.alloc(0) } as any,
             });
             expect(() => testClass.validate(context)).toThrow("Number of coords does not match number of colours");
@@ -93,6 +85,7 @@ describe("DrawPixelAsset", () => {
                 width: 1000,
                 height: 1000,
                 timeBetweenDraws: numberBetween(1, 900),
+                maxPixelsPerTransaction: numberBetween(100, 1000),
             });
             reducerHandler = testing.mocks.reducerHandlerMock;
         });
@@ -101,7 +94,7 @@ describe("DrawPixelAsset", () => {
             const height = numberBetween(canvas.timeBetweenDraws, canvas.timeBetweenDraws + 100000);
             const lastBlockHeaders = [{ height: height - 1 }, { height: height }];
 
-            mockAsset.coords = new Uint8Array(randomCoordinate(canvas.width, canvas.height));
+            mockAsset.coords = Buffer.from(new Uint8Array(randomCoordinate(canvas.width, canvas.height)));
             chain[`canvas-${mockAsset.canvasId}`] = codec.encode(canvasSchema, canvas);
             chain[`canvas-${mockAsset.canvasId}-account-${account.address.toString("hex")}`] = codec.encode(accountSchema, {
                 lastBlockHeight: height - canvas.timeBetweenDraws
@@ -136,7 +129,7 @@ describe("DrawPixelAsset", () => {
             const lastBlockHeaders = [{ height: height - 1 }, { height: height }];
             canvas.timeBetweenDraws = 0;
 
-            mockAsset.coords = new Uint8Array(randomCoordinate(canvas.width, canvas.height));
+            mockAsset.coords = Buffer.from(new Uint8Array(randomCoordinate(canvas.width, canvas.height)));
             chain[`canvas-${mockAsset.canvasId}`] = codec.encode(canvasSchema, canvas);
             chain[`canvas-${mockAsset.canvasId}-account-${account.address.toString("hex")}`] = codec.encode(accountSchema, {
                 lastBlockHeight: height + 1
@@ -199,10 +192,33 @@ describe("DrawPixelAsset", () => {
             await expect(testClass.apply(context)).rejects.toThrow("Canvas not active");
         });
 
+        it("should throw too many pixels", async () => {
+            canvas.maxPixelsPerTransaction = 1;
+            chain[`canvas-${mockAsset.canvasId}`] = codec.encode(canvasSchema, canvas);
+            const coord = canvas.width * canvas.height;
+            mockAsset.coords = Buffer.from(new Uint8Array([
+                coord & 0xFF, (coord >> 8) & 0xFF, (coord >> 16) & 0xFF,
+                coord & 0xFF, (coord >> 8) & 0xFF, (coord >> 16) & 0xFF,
+            ]));
+
+            const stateStore = new testing.mocks.StateStoreMock({
+                accounts: [account],
+                chain
+            });
+            const context = testing.createApplyAssetContext({
+                transaction: { senderAddress: account.address, nonce: BigInt(1) } as any,
+                asset: mockAsset,
+                reducerHandler,
+                stateStore
+            });
+
+            await expect(testClass.apply(context)).rejects.toThrow("Too many pixels");
+        });
+
         it("should throw coords out of bounds", async () => {
             chain[`canvas-${mockAsset.canvasId}`] = codec.encode(canvasSchema, canvas);
             const coord = canvas.width * canvas.height;
-            mockAsset.coords = new Uint8Array([coord & 0xFF, (coord >> 8) & 0xFF, (coord >> 16) & 0xFF]);
+            mockAsset.coords = Buffer.from(new Uint8Array([coord & 0xFF, (coord >> 8) & 0xFF, (coord >> 16) & 0xFF]));
 
             const stateStore = new testing.mocks.StateStoreMock({
                 accounts: [account],
@@ -222,7 +238,7 @@ describe("DrawPixelAsset", () => {
             const height = numberBetween(canvas.timeBetweenDraws, canvas.timeBetweenDraws + 100000);
             const lastBlockHeaders = [{ height: height - 1 }, { height: height }];
 
-            mockAsset.coords = new Uint8Array(randomCoordinate(canvas.width, canvas.height));
+            mockAsset.coords = Buffer.from(new Uint8Array(randomCoordinate(canvas.width, canvas.height)));
             chain[`canvas-${mockAsset.canvasId}`] = codec.encode(canvasSchema, canvas);
             chain[`canvas-${mockAsset.canvasId}-account-${account.address.toString("hex")}`] = codec.encode(accountSchema, {
                 lastBlockHeight: height - canvas.timeBetweenDraws + 2

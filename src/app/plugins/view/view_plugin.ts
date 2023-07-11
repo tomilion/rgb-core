@@ -4,12 +4,10 @@ import { DrawPixelAsset } from "../../modules/canvas/assets/draw_pixel_asset";
 import { CanvasModule } from "../../modules/canvas/canvas_module";
 
 interface ViewCache {
-    [key: number]: {
-        buffer: Buffer;
-        width: number;
-        height: number;
-        view: string|null;
-    }
+    buffer: Buffer;
+    width: number;
+    height: number;
+    view: string|null;
 }
 
 interface ViewChanged {
@@ -18,20 +16,10 @@ interface ViewChanged {
     colours: string;
 }
 
-interface Submitted {
-    [key: number]: {
-        [key: string]: PixelChangeSubmitted
-    }
-}
-
-interface Committed {
-    [key: number]: PixelChangeCommitted[]
-}
-
 export class ViewPlugin extends BasePlugin {
-    private views: ViewCache = {};
-    private submitted: Submitted = {};
-    private committed: Committed = {};
+    private views: Record<number, ViewCache> = {};
+    private submitted: Record<number, Record<string, PixelChangeSubmitted>> = {};
+    private committed: Record<number, PixelChangeCommitted[]> = {};
 
     public static get alias(): string {
         return "view";
@@ -39,7 +27,7 @@ export class ViewPlugin extends BasePlugin {
 
     public static get info(): PluginInfo {
         return {
-            author: "tomillion",
+            author: "tomilion",
             version: "0.1.0",
             name: ViewPlugin.alias,
         };
@@ -95,7 +83,7 @@ export class ViewPlugin extends BasePlugin {
 
     private subscribeAppReady(channel: BaseChannel): void {
         channel.subscribe("app:ready", async () => {
-            this._logger.info(null, "Initialising canvas cache");
+            this._logger.info(null, "Initialising view cache");
 
             const active = await channel.invoke<ActivePayload>("canvas:getActiveCanvases");
 
@@ -104,7 +92,7 @@ export class ViewPlugin extends BasePlugin {
                 await this.initialiseView(canvasId, channel);
             }
 
-            this._logger.info(null, "Canvas cache initialised");
+            this._logger.info(null, "View cache initialised");
         });
     }
 

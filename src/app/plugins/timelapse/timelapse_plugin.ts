@@ -22,8 +22,6 @@ interface TimelapseSummary {
     startBlockHeight: number;
     endBlockHeight: number;
     chunkSize: number;
-    width: number;
-    height: number;
     snapshot: Buffer;
 }
 
@@ -178,8 +176,6 @@ export class TimelapsePlugin extends BasePlugin<Config> {
             startBlockHeight: canvas.startBlockHeight,
             endBlockHeight: canvas.endBlockHeight,
             chunkSize: chunkSize,
-            width: canvas.width,
-            height: canvas.height,
             snapshot: Buffer.alloc(Math.ceil((canvas.width * canvas.height) / 2)),
         };
     }
@@ -196,7 +192,7 @@ export class TimelapsePlugin extends BasePlugin<Config> {
             if (((block.header.height - timelapse.startBlockHeight) % timelapse.chunkSize) === 0)
             {
                 await this.createSnapshot(
-                    canvasId as number,
+                    timelapse.timelapseId,
                     block.header.height,
                     timelapse.snapshot.toString("base64"),
                     mysql
@@ -258,7 +254,7 @@ export class TimelapsePlugin extends BasePlugin<Config> {
         colourPalette: string,
         mysql: MysqlConnection
     ): Promise<number> {
-        const querySummaryIdSql = "SELECT id FROM timelapse_summary WHERE canvas_id = ?";
+        const querySummaryIdSql = "SELECT id FROM timelapse_summaries WHERE canvas_id = ?";
         const existing = await mysql.query<[PrimaryKey]>(querySummaryIdSql, [canvasId]);
 
         if (existing.length !== 0)
@@ -266,7 +262,7 @@ export class TimelapsePlugin extends BasePlugin<Config> {
             return existing.pop().id;
         }
 
-        const createSummarySql = "INSERT INTO timelapse_summary (canvas_id, start_block_height, end_block_height, chunk_size, width, height, colour_palette) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        const createSummarySql = "INSERT INTO timelapse_summaries (canvas_id, start_block_height, end_block_height, chunk_size, width, height, colour_palette) VALUES (?, ?, ?, ?, ?, ?, ?)";
         await mysql.execute(createSummarySql, [canvasId, startBlockHeight, endBlockHeight, chunkSize, width, height, colourPalette]);
         const inserted = await mysql.query<[PrimaryKey]>(querySummaryIdSql, [canvasId]);
         assert(inserted.length !== 0);
@@ -326,21 +322,21 @@ export class TimelapsePlugin extends BasePlugin<Config> {
     }
 
     private async createSnapshot(
-        canvasId: number,
+        timelapseId: number,
         blockHeight: number,
         snapshot: string,
         mysql: MysqlConnection
     ): Promise<void> {
-        const queryTransactionSql = "SELECT id FROM timelapse_snapshots WHERE canvas_id = ? AND block_height = ?";
-        const existing = await mysql.query<[PrimaryKey]>(queryTransactionSql, [canvasId, blockHeight]);
+        const queryTransactionSql = "SELECT id FROM timelapse_snapshots WHERE timelapse_summary_fk = ? AND block_height = ?";
+        const existing = await mysql.query<[PrimaryKey]>(queryTransactionSql, [timelapseId, blockHeight]);
 
         if (existing.length !== 0)
         {
             return;
         }
 
-        const createAccountSql = "INSERT INTO timelapse_snapshots (canvas_id, block_height, `snapshot`) VALUES (?, ?, ?)";
-        await mysql.execute(createAccountSql, [canvasId, blockHeight, snapshot]);
+        const createAccountSql = "INSERT INTO timelapse_snapshots (timelapse_summary_fk, block_height, `snapshot`) VALUES (?, ?, ?)";
+        await mysql.execute(createAccountSql, [timelapseId, blockHeight, snapshot]);
     }
 
     private updateView(coord: number, colour: number, buffer: Buffer): Buffer {

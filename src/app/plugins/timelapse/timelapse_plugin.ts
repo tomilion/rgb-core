@@ -168,7 +168,7 @@ export class TimelapsePlugin extends BasePlugin<Config> {
             chunkSize,
             canvas.width,
             canvas.height,
-            canvas.colourPalette,
+            Buffer.from(canvas.colourPalette, "hex"),
             mysql
         );
         this.timelapses[canvasId] = {
@@ -194,7 +194,7 @@ export class TimelapsePlugin extends BasePlugin<Config> {
                 await this.createSnapshot(
                     timelapse.timelapseId,
                     block.header.height,
-                    timelapse.snapshot.toString("base64"),
+                    timelapse.snapshot,
                     mysql
                 );
             }
@@ -225,8 +225,8 @@ export class TimelapsePlugin extends BasePlugin<Config> {
                 accountIds[transaction.senderPublicKey],
                 blockIds[pixel.canvasId],
                 i,
-                pixel.coords,
-                pixel.colours,
+                Buffer.from(pixel.coords, "hex"),
+                Buffer.from(pixel.colours, "hex"),
                 mysql
             );
 
@@ -251,7 +251,7 @@ export class TimelapsePlugin extends BasePlugin<Config> {
         chunkSize: number,
         width: number,
         height: number,
-        colourPalette: string,
+        colourPalette: Buffer,
         mysql: MysqlConnection
     ): Promise<number> {
         const querySummaryIdSql = "SELECT id FROM timelapse_summaries WHERE canvas_id = ?";
@@ -305,8 +305,8 @@ export class TimelapsePlugin extends BasePlugin<Config> {
         accountId: number,
         blockId: number,
         blockIndex: number,
-        coords: string,
-        colours: string,
+        coords: Buffer,
+        colours: Buffer,
         mysql: MysqlConnection
     ): Promise<void> {
         const queryTransactionSql = "SELECT id FROM canvas_transactions WHERE account_fk = ? AND block_fk = ? AND block_index = ?";
@@ -324,7 +324,7 @@ export class TimelapsePlugin extends BasePlugin<Config> {
     private async createSnapshot(
         timelapseId: number,
         blockHeight: number,
-        snapshot: string,
+        snapshot: Buffer,
         mysql: MysqlConnection
     ): Promise<void> {
         const queryTransactionSql = "SELECT id FROM timelapse_snapshots WHERE timelapse_summary_fk = ? AND block_height = ?";

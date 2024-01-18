@@ -1,7 +1,8 @@
 import { strict as assert } from 'assert';
-import { BaseChannel, EventsDefinition, ActionsDefinition, SchemaWithDefault, BasePlugin, PluginInfo } from "lisk-sdk";
+import Jimp from "jimp";
+import { cryptography, BaseChannel, EventsDefinition, ActionsDefinition, SchemaWithDefault, BasePlugin, PluginInfo } from "lisk-sdk";
 import { PluginOptionsWithAppConfig } from "lisk-framework/dist-node/types";
-import { ActivePayload, CanvasId, CanvasResponse, DrawPixelPayloadJSON } from "../../modules/canvas/schemas";
+import { ActivePayload, CanvasId, CanvasResponse, CompletePayload, DrawPixelPayloadJSON } from "../../modules/canvas/schemas";
 import { DrawPixelAsset } from "../../modules/canvas/assets/draw_pixel_asset";
 import { CanvasModule } from "../../modules/canvas/canvas_module";
 import { MysqlConnection } from "../../util/mysql_connection";
@@ -22,6 +23,9 @@ interface TimelapseSummary {
     startBlockHeight: number;
     endBlockHeight: number;
     chunkSize: number;
+    width: number;
+    height: number;
+    colourPalette: number[][];
     snapshot: Buffer;
 }
 
@@ -89,8 +93,9 @@ export class TimelapsePlugin extends BasePlugin<Config> {
             let max: number|null = null;
 
             const active = await channel.invoke<ActivePayload>("canvas:getActiveCanvases");
+            const complete = await channel.invoke<CompletePayload>("canvas:getCompleteCanvases");
 
-            for (const canvasId of active.canvasIds)
+            for (const canvasId of [...active.canvasIds, ...complete.canvasIds])
             {
                 await this.initialiseTimelapse(canvasId, channel, mysql);
                 const timelapse = this.timelapses[canvasId];
@@ -161,6 +166,7 @@ export class TimelapsePlugin extends BasePlugin<Config> {
 
         // TODO: optimise chunk size depending on block height (starting with max 20 chunks)
         const chunkSize = Math.ceil((canvas.endBlockHeight - canvas.startBlockHeight) / 20);
+        const colourPalette = Buffer.from(canvas.colourPalette, "hex");
         const summaryId = await this.getOrCreateTimelapseSummary(
             canvasId,
             canvas.startBlockHeight,
@@ -168,7 +174,7 @@ export class TimelapsePlugin extends BasePlugin<Config> {
             chunkSize,
             canvas.width,
             canvas.height,
-            Buffer.from(canvas.colourPalette, "hex"),
+            colourPalette,
             mysql
         );
         this.timelapses[canvasId] = {
@@ -176,6 +182,9 @@ export class TimelapsePlugin extends BasePlugin<Config> {
             startBlockHeight: canvas.startBlockHeight,
             endBlockHeight: canvas.endBlockHeight,
             chunkSize: chunkSize,
+            width: canvas.width,
+            height: canvas.height,
+            colourPalette: TimelapsePlugin.deserialiseColourPalette(colourPalette),
             snapshot: Buffer.alloc(Math.ceil((canvas.width * canvas.height) / 2)),
         };
     }
@@ -185,15 +194,34 @@ export class TimelapsePlugin extends BasePlugin<Config> {
         const blockIds: Record<number, number> = {};
         const accountIds: Record<string, number> = {};
 
-        for (const canvasId in this.timelapses)
-        {
+        for (const canvasId in this.timelapses) {
             const timelapse = this.timelapses[canvasId];
 
-            if (((block.header.height - timelapse.startBlockHeight) % timelapse.chunkSize) === 0)
-            {
+            if (((block.header.height - timelapse.startBlockHeight) % timelapse.chunkSize) === 0) {
                 await this.createSnapshot(
                     timelapse.timelapseId,
                     block.header.height,
+                    timelapse.snapshot,
+                    mysql
+                );
+                await this.createPreview(
+                    timelapse.timelapseId,
+                    block.header.height,
+                    timelapse.width,
+                    timelapse.height,
+                    timelapse.colourPalette,
+                    timelapse.snapshot,
+                    mysql
+                );
+            }
+
+            if (block.header.height === timelapse.endBlockHeight) {
+                await this.createPreview(
+                    timelapse.timelapseId,
+                    block.header.height,
+                    timelapse.width,
+                    timelapse.height,
+                    timelapse.colourPalette,
                     timelapse.snapshot,
                     mysql
                 );
@@ -218,7 +246,10 @@ export class TimelapsePlugin extends BasePlugin<Config> {
 
             if (!(transaction.senderPublicKey in accountIds))
             {
-                accountIds[transaction.senderPublicKey] = await this.getOrCreateAccount(transaction.senderPublicKey, mysql);
+                accountIds[transaction.senderPublicKey] = await this.getOrCreateAccount(
+                    cryptography.getLisk32AddressFromPublicKey(Buffer.from(transaction.senderPublicKey, "hex")),
+                    mysql
+                );
             }
 
             await this.createTransaction(
@@ -262,8 +293,8 @@ export class TimelapsePlugin extends BasePlugin<Config> {
             return existing.pop().id;
         }
 
-        const createSummarySql = "INSERT INTO timelapse_summaries (canvas_id, start_block_height, end_block_height, chunk_size, width, height, colour_palette) VALUES (?, ?, ?, ?, ?, ?, ?)";
-        await mysql.execute(createSummarySql, [canvasId, startBlockHeight, endBlockHeight, chunkSize, width, height, colourPalette]);
+        const createSummarySql = "INSERT INTO timelapse_summaries (canvas_id, start_block_height, end_block_height, chunk_size, width, height, colour_palette, label) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        await mysql.execute(createSummarySql, [canvasId, startBlockHeight, endBlockHeight, chunkSize, width, height, colourPalette, ""]);
         const inserted = await mysql.query<[PrimaryKey]>(querySummaryIdSql, [canvasId]);
         assert(inserted.length !== 0);
         return inserted.pop().id;
@@ -285,18 +316,18 @@ export class TimelapsePlugin extends BasePlugin<Config> {
         return inserted.pop().id;
     }
 
-    private async getOrCreateAccount(publicKey: string, mysql: MysqlConnection): Promise<number> {
-        const queryAccountIdSql = "SELECT id FROM canvas_accounts WHERE public_key = ?";
-        const existing = await mysql.query<[PrimaryKey]>(queryAccountIdSql, [publicKey]);
+    private async getOrCreateAccount(address: string, mysql: MysqlConnection): Promise<number> {
+        const queryAccountIdSql = "SELECT id FROM canvas_accounts WHERE address = ?";
+        const existing = await mysql.query<[PrimaryKey]>(queryAccountIdSql, [address]);
 
         if (existing.length !== 0)
         {
             return existing.pop().id;
         }
 
-        const createAccountSql = "INSERT INTO canvas_accounts (public_key) VALUES (?)";
-        await mysql.execute(createAccountSql, [publicKey]);
-        const inserted = await mysql.query<[PrimaryKey]>(queryAccountIdSql, [publicKey]);
+        const createAccountSql = "INSERT INTO canvas_accounts (address) VALUES (?)";
+        await mysql.execute(createAccountSql, [address]);
+        const inserted = await mysql.query<[PrimaryKey]>(queryAccountIdSql, [address]);
         assert(inserted.length !== 0);
         return inserted.pop().id;
     }
@@ -339,6 +370,44 @@ export class TimelapsePlugin extends BasePlugin<Config> {
         await mysql.execute(createAccountSql, [timelapseId, blockHeight, snapshot]);
     }
 
+    private async createPreview(
+        timelapseId: number,
+        blockHeight: number,
+        width: number,
+        height: number,
+        colourPalette: number[][],
+        snapshot: Buffer,
+        mysql: MysqlConnection
+    ): Promise<void> {
+        const queryPreviewSql = "SELECT id FROM timelapse_previews WHERE timelapse_summary_fk = ? AND block_height = ?";
+        const existing = await mysql.query<[PrimaryKey]>(queryPreviewSql, [timelapseId, blockHeight]);
+
+        if (existing.length !== 0) {
+            return;
+        }
+
+        const pngBuffer = Buffer.alloc(width * height * 4);
+
+        for (let i = 0; i < snapshot.length; i++) {
+            const current = snapshot.readUInt8(i);
+            pngBuffer.set(colourPalette[current & 0x0F], i * 2 * 4);
+            pngBuffer.set(colourPalette[(current >> 4) & 0x0F], ((i * 2) + 1) * 4);
+        }
+
+        const pngImage = await new Promise<Jimp>((resolve) => {
+            new Jimp({ data: pngBuffer, width: width, height: height }, (err, image) => {
+                if (err) {
+                    throw err;
+                }
+
+                resolve(image);
+            });
+        });
+        const preview = await pngImage.getBufferAsync(Jimp.MIME_PNG);
+        const createPreviewSql = "INSERT INTO timelapse_previews (timelapse_summary_fk, block_height, preview) VALUES (?, ?, ?)";
+        await mysql.execute(createPreviewSql, [timelapseId, blockHeight, preview]);
+    }
+
     private updateView(coord: number, colour: number, buffer: Buffer): Buffer {
         const index = Math.floor(coord / 2);
         const current = buffer.readUInt8(index);
@@ -346,6 +415,22 @@ export class TimelapsePlugin extends BasePlugin<Config> {
         const modified = (current & (0xF0 >> offset)) | (colour << offset);
         buffer.set([modified], index);
         return buffer;
+    }
+
+    private static deserialiseColourPalette(colourPalette: Buffer): number[][] {
+        return colourPalette.reduce((previousValue: number[][], currentValue: number, currentIndex: number, array: Uint8Array) => {
+            if (currentIndex % 3 === 2)
+            {
+                previousValue.push([
+                    array[currentIndex - 2],
+                    array[currentIndex - 1],
+                    array[currentIndex],
+                    255
+                ]);
+            }
+
+            return previousValue;
+        }, []);
     }
 
     private static deserialiseCoords(coords: string): number[] {

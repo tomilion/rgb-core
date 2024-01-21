@@ -78,12 +78,9 @@ export class TimelapsePlugin extends BasePlugin<Config> {
         this.subscribeAppReady(channel, mysql);
         this.subscribeAppBlockNew(channel, mysql);
         this.subscribeCanvasStarted(channel, mysql);
-        this.subscribeCanvasCompleted(channel, mysql);
     }
 
-    public async unload(): Promise<void> {
-
-    }
+    public async unload(): Promise<void> { }
 
     private subscribeAppReady(channel: BaseChannel, mysql: MysqlConnection): void {
         channel.subscribe("app:ready", async () => {
@@ -149,15 +146,6 @@ export class TimelapsePlugin extends BasePlugin<Config> {
         });
     }
 
-    private subscribeCanvasCompleted(channel: BaseChannel, mysql: MysqlConnection): void {
-        channel.subscribe("canvas:completed", async (data?: Record<string, unknown>) => {
-            const canvasId = data as CanvasId;
-            delete this.timelapses[canvasId.canvasId];
-            const updateCompletedSql = "UPDATE timelapse_summaries SET completed = ? WHERE canvas_id = ?";
-            await mysql.execute(updateCompletedSql, [1, canvasId.canvasId]);
-        });
-    }
-
     private async initialiseTimelapse(canvasId: number, channel: BaseChannel, mysql: MysqlConnection): Promise<void> {
         const canvas = await channel.invoke<CanvasResponse|null>("canvas:getCanvas", { canvasId: canvasId });
 
@@ -198,6 +186,10 @@ export class TimelapsePlugin extends BasePlugin<Config> {
         for (const canvasId in this.timelapses) {
             const timelapse = this.timelapses[canvasId];
 
+            if (block.header.height < timelapse.startBlockHeight || block.header.height > timelapse.endBlockHeight) {
+                continue;
+            }
+
             if (((block.header.height - timelapse.startBlockHeight) % timelapse.chunkSize) === 0) {
                 await this.createSnapshot(
                     timelapse.timelapseId,
@@ -226,6 +218,11 @@ export class TimelapsePlugin extends BasePlugin<Config> {
                     timelapse.snapshot,
                     mysql
                 );
+
+                const updateCompletedSql = "UPDATE timelapse_summaries SET completed = ? WHERE canvas_id = ?";
+                await mysql.execute(updateCompletedSql, [1, canvasId]);
+
+                delete this.timelapses[canvasId];
             }
         }
 

@@ -164,6 +164,7 @@ export class TimelapsePlugin extends BasePlugin<Config> {
             canvas.width,
             canvas.height,
             colourPalette,
+            canvas.label,
             mysql
         );
         this.timelapses[canvasId] = {
@@ -276,6 +277,7 @@ export class TimelapsePlugin extends BasePlugin<Config> {
         width: number,
         height: number,
         colourPalette: Buffer,
+        label: string,
         mysql: MysqlConnection
     ): Promise<number> {
         const querySummaryIdSql = "SELECT id FROM timelapse_summaries WHERE canvas_id = ?";
@@ -286,7 +288,7 @@ export class TimelapsePlugin extends BasePlugin<Config> {
         }
 
         const createSummarySql = "INSERT INTO timelapse_summaries (canvas_id, start_block_height, end_block_height, chunk_size, width, height, colour_palette, label) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        await mysql.execute(createSummarySql, [canvasId, startBlockHeight, endBlockHeight, chunkSize, width, height, colourPalette, ""]);
+        await mysql.execute(createSummarySql, [canvasId, startBlockHeight, endBlockHeight, chunkSize, width, height, colourPalette, label]);
         const inserted = await mysql.query<[PrimaryKey]>(querySummaryIdSql, [canvasId]);
         assert(inserted.length !== 0);
         return inserted.pop().id;

@@ -126,6 +126,7 @@ export class StatisticsPlugin extends BasePlugin<Config> {
                 fee,
                 block_height
             ) VALUES ${transactions.map(() => "(?, ?, ?, ?, ?, ?)").join(", ")}
+            ON DUPLICATE KEY UPDATE transaction_id=transaction_id
         `;
         await mysql.execute(
             createTransactionsSql,

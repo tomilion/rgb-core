@@ -22,6 +22,7 @@ export class CreateCanvasAsset extends BaseAsset<CreateCanvasPayload> {
             timeBetweenDraws: { fieldNumber: 7, dataType: "uint32" },
             colourPalette: { fieldNumber: 8, dataType: "bytes", minLength: 48, maxLength: 48 },
             maxPixelsPerTransaction: { fieldNumber: 9, dataType: "uint32" },
+            label: { fieldNumber: 10, dataType: "string", minLength: 0, maxLength: 64 },
         },
     };
 
@@ -97,6 +98,7 @@ export class CreateCanvasAsset extends BaseAsset<CreateCanvasPayload> {
             timeBetweenDraws: asset.timeBetweenDraws,
             colourPalette: asset.colourPalette,
             maxPixelsPerTransaction: asset.maxPixelsPerTransaction,
+            label: asset.label ?? "",
         };
         await stateStore.chain.set(canvasId, codec.encode(canvasSchema, canvas));
 

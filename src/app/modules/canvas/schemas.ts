@@ -8,18 +8,20 @@ export interface CreateCanvasPayload {
     timeBetweenDraws: number;
     colourPalette: Buffer;
     maxPixelsPerTransaction: number;
+    label?: string;
 }
 
 export interface ChangeCanvasPayload {
     canvasId: number;
-    costPerPixel?: bigint | null;
-    startBlockHeight?: bigint | null;
-    endBlockHeight?: bigint | null;
-    width?: number | null;
-    height?: number | null;
-    timeBetweenDraws?: number | null;
-    colourPalette?: Buffer | null;
-    maxPixelsPerTransaction?: number | null;
+    costPerPixel?: bigint;
+    startBlockHeight?: bigint;
+    endBlockHeight?: bigint;
+    width?: number;
+    height?: number;
+    timeBetweenDraws?: number;
+    colourPalette?: Buffer;
+    maxPixelsPerTransaction?: number;
+    label?: string;
 }
 
 export enum CanvasState {
@@ -39,6 +41,7 @@ export interface CanvasPayload {
     colourPalette: Buffer;
     maxPixelsPerTransaction: number;
     state: number;
+    label: string;
 }
 
 export const canvasSchema = {
@@ -56,6 +59,7 @@ export const canvasSchema = {
         colourPalette: { fieldNumber: 8, dataType: "bytes", minLength: 48, maxLength: 48 },
         maxPixelsPerTransaction: { fieldNumber: 9, dataType: "uint32" },
         state: { fieldNumber: 10, dataType: "uint32", default: CanvasState.PENDING },
+        label: { fieldNumber: 11, dataType: "string", minLength: 0, maxLength: 64, default: "" },
     },
 };
 
@@ -169,21 +173,22 @@ export interface CanvasResponse {
     colourPalette: string;
     maxPixelsPerTransaction: number;
     state: number;
+    label: string;
 }
 
-export type CanvasId = {
+export interface CanvasId {
     canvasId: number;
-};
+}
 
-export type PixelChangeSubmitted = {
+export interface PixelChangeSubmitted {
     address: string;
     transactionId: string;
     pixel: DrawPixelPayload;
-};
+}
 
-export type PixelChangeCommitted = {
+export interface PixelChangeCommitted {
     address: string;
     transactionId: string;
     blockHeight: number;
     pixel: DrawPixelPayload;
-};
+}

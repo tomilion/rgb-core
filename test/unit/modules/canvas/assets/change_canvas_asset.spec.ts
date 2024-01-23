@@ -2,7 +2,7 @@ import { codec, testing } from "lisk-sdk";
 import { ChangeCanvasAsset } from "../../../../../src/app/modules/canvas/assets/change_canvas_asset";
 import { CanvasModule } from "../../../../../src/app/modules/canvas/canvas_module";
 import { canvasSchema, CanvasState, ChangeCanvasPayload } from "../../../../../src/app/modules/canvas/schemas";
-import { numberBetween, randomCanvas, randomAddress } from "../../../../utils/random_generator";
+import { numberBetween, randomCanvas, randomAddress, randomString } from "../../../../utils/random_generator";
 
 describe("ChangeCanvasAsset", () => {
     let mockUser: Buffer;
@@ -21,6 +21,7 @@ describe("ChangeCanvasAsset", () => {
             timeBetweenDraws: numberBetween(0, 4294967295),
             maxPixelsPerTransaction: numberBetween(1, 10000),
             colourPalette: Buffer.from(new Uint8Array(48)),
+            label: randomString(32),
         };
         testClass = new ChangeCanvasAsset();
     });
@@ -177,6 +178,7 @@ describe("ChangeCanvasAsset", () => {
                     colourPalette: mockAsset.colourPalette,
                     maxPixelsPerTransaction: mockAsset.maxPixelsPerTransaction,
                     state: CanvasState.PENDING,
+                    label: mockAsset.label,
                 })
             );
         });

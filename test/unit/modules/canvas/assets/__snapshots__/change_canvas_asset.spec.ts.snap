@@ -26,6 +26,12 @@ Object {
       "dataType": "uint32",
       "fieldNumber": 6,
     },
+    "label": Object {
+      "dataType": "string",
+      "fieldNumber": 10,
+      "maxLength": 64,
+      "minLength": 0,
+    },
     "maxPixelsPerTransaction": Object {
       "dataType": "uint32",
       "fieldNumber": 9,

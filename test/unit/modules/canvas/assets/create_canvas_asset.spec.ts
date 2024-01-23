@@ -2,7 +2,7 @@ import { codec, testing } from "lisk-sdk";
 import { CreateCanvasAsset } from "../../../../../src/app/modules/canvas/assets/create_canvas_asset";
 import { CanvasModule } from "../../../../../src/app/modules/canvas/canvas_module";
 import { canvasSchema, CreateCanvasPayload, pendingSchema } from "../../../../../src/app/modules/canvas/schemas";
-import { numberBetween, randomAddress } from "../../../../utils/random_generator";
+import { numberBetween, randomAddress, randomString } from "../../../../utils/random_generator";
 import { ReducerHandler } from "lisk-framework/dist-node/types";
 import { when } from "jest-when";
 
@@ -21,6 +21,7 @@ describe("CreateCanvasAsset", () => {
             timeBetweenDraws: numberBetween(0, 4294967295),
             maxPixelsPerTransaction: numberBetween(1, 10000),
             colourPalette: Buffer.from(new Uint8Array(48)),
+            label: randomString(32),
         };
         testClass = new CreateCanvasAsset();
     });
@@ -197,6 +198,7 @@ describe("CreateCanvasAsset", () => {
                     timeBetweenDraws: mockAsset.timeBetweenDraws,
                     colourPalette: mockAsset.colourPalette,
                     maxPixelsPerTransaction: mockAsset.maxPixelsPerTransaction,
+                    label: mockAsset.label,
                 })
             );
             expect(stateStore.chain.set).toHaveBeenCalledWith(
@@ -241,6 +243,7 @@ describe("CreateCanvasAsset", () => {
                     timeBetweenDraws: mockAsset.timeBetweenDraws,
                     colourPalette: mockAsset.colourPalette,
                     maxPixelsPerTransaction: mockAsset.maxPixelsPerTransaction,
+                    label: mockAsset.label,
                 })
             );
             expect(stateStore.chain.set).toHaveBeenCalledWith(
@@ -260,6 +263,9 @@ describe("CreateCanvasAsset", () => {
                 width: mockAsset.width,
                 height: mockAsset.height,
                 timeBetweenDraws: mockAsset.timeBetweenDraws,
+                colourPalette: mockAsset.colourPalette,
+                maxPixelsPerTransaction: mockAsset.maxPixelsPerTransaction,
+                label: mockAsset.label,
             });
             const stateStore = new testing.mocks.StateStoreMock({
                 accounts: [account],

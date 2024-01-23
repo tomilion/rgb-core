@@ -22,6 +22,7 @@ export class ChangeCanvasAsset extends BaseAsset<ChangeCanvasPayload> {
             timeBetweenDraws: { fieldNumber: 7, dataType: "uint32" },
             colourPalette: { fieldNumber: 8, dataType: "bytes", minLength: 48, maxLength: 48 },
             maxPixelsPerTransaction: { fieldNumber: 9, dataType: "uint32" },
+            label: { fieldNumber: 10, dataType: "string", minLength: 0, maxLength: 64 },
         },
     };
 
@@ -117,8 +118,9 @@ export class ChangeCanvasAsset extends BaseAsset<ChangeCanvasPayload> {
         canvas.startBlockHeight = asset.startBlockHeight ?? canvas.startBlockHeight;
         canvas.endBlockHeight = asset.endBlockHeight ?? canvas.endBlockHeight;
         canvas.timeBetweenDraws = asset.timeBetweenDraws ?? canvas.timeBetweenDraws;
-        canvas.maxPixelsPerTransaction = asset.maxPixelsPerTransaction ?? canvas.maxPixelsPerTransaction;
         canvas.colourPalette = asset.colourPalette ?? canvas.colourPalette;
+        canvas.maxPixelsPerTransaction = asset.maxPixelsPerTransaction ?? canvas.maxPixelsPerTransaction;
+        canvas.label = asset.label ?? canvas.label;
 
         if (canvas.startBlockHeight > canvas.endBlockHeight)
         {

@@ -88,6 +88,12 @@ export class TimelapsePlugin extends BasePlugin<Config> {
         channel.subscribe("app:ready", async () => {
             this._logger.info(null, "Initialising timelapse cache");
 
+            const pending = await channel.invoke<ActivePayload>("canvas:getPendingCanvases");
+
+            for (const canvasId of pending.canvasIds) {
+                await this.initialiseTimelapse(canvasId, channel, mysql);
+            }
+
             let min: number|null = null;
             let max: number|null = null;
 

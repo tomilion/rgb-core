@@ -1,30 +1,13 @@
 import { ApplyAssetContext, BaseAsset, codec, ValidateAssetContext } from "lisk-sdk";
 import { serialiseCanvasId } from "../utils";
-import { CanvasPayload, canvasSchema, CanvasState, ChangeCanvasPayload } from "../schemas";
+import { CanvasPayload, canvasSchema, CanvasState, ChangeCanvasPayload, changeCanvasSchema } from "../schemas";
 
 export class ChangeCanvasAsset extends BaseAsset<ChangeCanvasPayload> {
     public static readonly ASSET_ID = 1;
 
     public name = "changeCanvas";
     public id = ChangeCanvasAsset.ASSET_ID;
-    public schema = {
-        $id: "canvas/changeCanvas-asset",
-        title: "ChangeCanvasAsset transaction asset for canvas module",
-        type: "object",
-        required: ["canvasId"],
-        properties: {
-            canvasId: { fieldNumber: 1, dataType: "uint32" },
-            costPerPixel: { fieldNumber: 2, dataType: "uint64" },
-            startBlockHeight: { fieldNumber: 3, dataType: "uint64" },
-            endBlockHeight: { fieldNumber: 4, dataType: "uint64" },
-            width: { fieldNumber: 5, dataType: "uint32" },
-            height: { fieldNumber: 6, dataType: "uint32" },
-            timeBetweenDraws: { fieldNumber: 7, dataType: "uint32" },
-            colourPalette: { fieldNumber: 8, dataType: "bytes", minLength: 48, maxLength: 48 },
-            maxPixelsPerTransaction: { fieldNumber: 9, dataType: "uint32" },
-            label: { fieldNumber: 10, dataType: "string", minLength: 0, maxLength: 64 },
-        },
-    };
+    public schema = changeCanvasSchema;
 
     public validate(context: ValidateAssetContext<ChangeCanvasPayload>): void {
         const { asset, header } = context;

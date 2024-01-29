@@ -11,6 +11,25 @@ export interface CreateCanvasPayload {
     label?: string;
 }
 
+export const createCanvasSchema = {
+    $id: "canvas/createCanvas-asset",
+    title: "CreateCanvasAsset transaction asset for canvas module",
+    type: "object",
+    required: ["canvasId", "costPerPixel", "startBlockHeight", "endBlockHeight", "width", "height", "timeBetweenDraws", "colourPalette", "maxPixelsPerTransaction"],
+    properties: {
+        canvasId: { fieldNumber: 1, dataType: "uint32" },
+        costPerPixel: { fieldNumber: 2, dataType: "uint64" },
+        startBlockHeight: { fieldNumber: 3, dataType: "uint64" },
+        endBlockHeight: { fieldNumber: 4, dataType: "uint64" },
+        width: { fieldNumber: 5, dataType: "uint32" },
+        height: { fieldNumber: 6, dataType: "uint32" },
+        timeBetweenDraws: { fieldNumber: 7, dataType: "uint32" },
+        colourPalette: { fieldNumber: 8, dataType: "bytes", minLength: 48, maxLength: 48 },
+        maxPixelsPerTransaction: { fieldNumber: 9, dataType: "uint32" },
+        label: { fieldNumber: 10, dataType: "string", minLength: 0, maxLength: 64 },
+    },
+};
+
 export interface ChangeCanvasPayload {
     canvasId: number;
     costPerPixel?: bigint;
@@ -23,6 +42,25 @@ export interface ChangeCanvasPayload {
     maxPixelsPerTransaction?: number;
     label?: string;
 }
+
+export const changeCanvasSchema = {
+    $id: "canvas/changeCanvas-asset",
+    title: "ChangeCanvasAsset transaction asset for canvas module",
+    type: "object",
+    required: ["canvasId"],
+    properties: {
+        canvasId: { fieldNumber: 1, dataType: "uint32" },
+        costPerPixel: { fieldNumber: 2, dataType: "uint64" },
+        startBlockHeight: { fieldNumber: 3, dataType: "uint64" },
+        endBlockHeight: { fieldNumber: 4, dataType: "uint64" },
+        width: { fieldNumber: 5, dataType: "uint32" },
+        height: { fieldNumber: 6, dataType: "uint32" },
+        timeBetweenDraws: { fieldNumber: 7, dataType: "uint32" },
+        colourPalette: { fieldNumber: 8, dataType: "bytes", minLength: 48, maxLength: 48 },
+        maxPixelsPerTransaction: { fieldNumber: 9, dataType: "uint32" },
+        label: { fieldNumber: 10, dataType: "string", minLength: 0, maxLength: 64 },
+    },
+};
 
 export enum CanvasState {
     PENDING = 0,

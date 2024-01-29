@@ -2,7 +2,7 @@ import { strict as assert } from 'assert';
 import Jimp from "jimp";
 import { cryptography, BaseChannel, EventsDefinition, ActionsDefinition, SchemaWithDefault, BasePlugin, PluginInfo } from "lisk-sdk";
 import { PluginOptionsWithAppConfig } from "lisk-framework/dist-node/types";
-import { ActivePayload, CanvasId, CanvasResponse, CompletePayload, DrawPixelPayloadJSON } from "../../modules/canvas/schemas";
+import { ActivePayload, CanvasId, CanvasResponse, ChangeCanvasPayload, CompletePayload, CreateCanvasPayload, DrawPixelPayloadJSON } from "../../modules/canvas/schemas";
 import { DrawPixelAsset } from "../../modules/canvas/assets/draw_pixel_asset";
 import { CanvasModule } from "../../modules/canvas/canvas_module";
 import { MysqlConnection } from "../../util/mysql_connection";
@@ -77,6 +77,8 @@ export class TimelapsePlugin extends BasePlugin<Config> {
         });
         this.subscribeAppReady(channel, mysql);
         this.subscribeAppBlockNew(channel, mysql);
+        this.subscribeCanvasCreated(channel, mysql);
+        this.subscribeCanvasChanged(channel, mysql);
         this.subscribeCanvasStarted(channel, mysql);
     }
 
@@ -125,6 +127,20 @@ export class TimelapsePlugin extends BasePlugin<Config> {
         channel.subscribe("app:block:new", async (data?: Record<string, unknown>) => {
             const newBlockEvent = data as { block: string };
             await this.createTransactions(newBlockEvent.block, mysql);
+        });
+    }
+
+    private subscribeCanvasCreated(channel: BaseChannel, mysql: MysqlConnection): void {
+        channel.subscribe("canvas:created", async (data?: Record<string, unknown>) => {
+            const canvasId = data as CreateCanvasPayload;
+            await this.initialiseTimelapse(canvasId.canvasId, channel, mysql);
+        });
+    }
+
+    private subscribeCanvasChanged(channel: BaseChannel, mysql: MysqlConnection): void {
+        channel.subscribe("canvas:changed", async (data?: Record<string, unknown>) => {
+            const canvasId = data as ChangeCanvasPayload;
+            await this.initialiseTimelapse(canvasId.canvasId, channel, mysql);
         });
     }
 
@@ -280,15 +296,44 @@ export class TimelapsePlugin extends BasePlugin<Config> {
         label: string,
         mysql: MysqlConnection
     ): Promise<number> {
+        const createSummarySql = `
+            INSERT INTO timelapse_summaries (
+                canvas_id,
+                start_block_height,
+                end_block_height,
+                chunk_size,
+                width,
+                height,
+                colour_palette,
+                label
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE 
+                start_block_height = ?,
+                end_block_height = ?,
+                chunk_size = ?,
+                width = ?,
+                height = ?,
+                colour_palette = ?,
+                label = ?
+        `;
+        await mysql.execute(createSummarySql, [
+            canvasId,
+            startBlockHeight,
+            endBlockHeight,
+            chunkSize,
+            width,
+            height,
+            colourPalette,
+            label,
+            startBlockHeight,
+            endBlockHeight,
+            chunkSize,
+            width,
+            height,
+            colourPalette,
+            label,
+        ]);
         const querySummaryIdSql = "SELECT id FROM timelapse_summaries WHERE canvas_id = ?";
-        const existing = await mysql.query<[PrimaryKey]>(querySummaryIdSql, [canvasId]);
-
-        if (existing.length !== 0) {
-            return existing.pop().id;
-        }
-
-        const createSummarySql = "INSERT INTO timelapse_summaries (canvas_id, start_block_height, end_block_height, chunk_size, width, height, colour_palette, label) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        await mysql.execute(createSummarySql, [canvasId, startBlockHeight, endBlockHeight, chunkSize, width, height, colourPalette, label]);
         const inserted = await mysql.query<[PrimaryKey]>(querySummaryIdSql, [canvasId]);
         assert(inserted.length !== 0);
         return inserted.pop().id;

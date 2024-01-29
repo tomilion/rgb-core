@@ -1,30 +1,13 @@
 import { ApplyAssetContext, BaseAsset, codec, ValidateAssetContext } from "lisk-sdk";
 import { serialiseCanvasId } from "../utils";
-import { canvasSchema, CreateCanvasPayload, PendingPayload, pendingSchema } from "../schemas";
+import { canvasSchema, CreateCanvasPayload, createCanvasSchema, PendingPayload, pendingSchema } from "../schemas";
 
 export class CreateCanvasAsset extends BaseAsset<CreateCanvasPayload> {
     public static readonly ASSET_ID = 0;
 
     public name = "createCanvas";
     public id = CreateCanvasAsset.ASSET_ID;
-    public schema = {
-        $id: "canvas/createCanvas-asset",
-        title: "CreateCanvasAsset transaction asset for canvas module",
-        type: "object",
-        required: ["canvasId", "costPerPixel", "startBlockHeight", "endBlockHeight", "width", "height", "timeBetweenDraws", "colourPalette", "maxPixelsPerTransaction"],
-        properties: {
-            canvasId: { fieldNumber: 1, dataType: "uint32" },
-            costPerPixel: { fieldNumber: 2, dataType: "uint64" },
-            startBlockHeight: { fieldNumber: 3, dataType: "uint64" },
-            endBlockHeight: { fieldNumber: 4, dataType: "uint64" },
-            width: { fieldNumber: 5, dataType: "uint32" },
-            height: { fieldNumber: 6, dataType: "uint32" },
-            timeBetweenDraws: { fieldNumber: 7, dataType: "uint32" },
-            colourPalette: { fieldNumber: 8, dataType: "bytes", minLength: 48, maxLength: 48 },
-            maxPixelsPerTransaction: { fieldNumber: 9, dataType: "uint32" },
-            label: { fieldNumber: 10, dataType: "string", minLength: 0, maxLength: 64 },
-        },
-    };
+    public schema = createCanvasSchema;
 
     public validate(context: ValidateAssetContext<CreateCanvasPayload>): void {
         const { asset, header } = context;

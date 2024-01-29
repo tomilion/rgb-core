@@ -4,7 +4,7 @@ import { ChangeCanvasAsset } from "./assets/change_canvas_asset";
 import { CreateCanvasAsset } from "./assets/create_canvas_asset";
 import { DrawPixelAsset } from "./assets/draw_pixel_asset";
 import { serialiseCanvasId } from "./utils";
-import { AccountType, ActivePayload, activeSchema, AddressPayload, addressSchema, CanvasAccount, CanvasId, CanvasPayload, CanvasResponse, canvasSchema, CanvasState, CompletePayload, completeSchema, DrawPixelPayload, drawPixelSchema, PendingPayload, pendingSchema } from "./schemas";
+import { AccountType, ActivePayload, activeSchema, AddressPayload, addressSchema, CanvasAccount, CanvasId, CanvasPayload, CanvasResponse, canvasSchema, CanvasState, ChangeCanvasPayload, changeCanvasSchema, CompletePayload, completeSchema, CreateCanvasPayload, createCanvasSchema, DrawPixelPayload, drawPixelSchema, PendingPayload, pendingSchema } from "./schemas";
 
 export class CanvasModule extends BaseModule {
     public static readonly MODULE_ID = 1000;
@@ -39,7 +39,7 @@ export class CanvasModule extends BaseModule {
         new ChangeCanvasAsset(),
         new DrawPixelAsset(),
     ];
-    public events = ["started", "completed", "pixelChangeSubmitted", "pixelChangeCommitted"];
+    public events = ["created", "changed", "started", "completed", "pixelChangeSubmitted", "pixelChangeCommitted"];
 
     // Lifecycle hooks
     public async beforeBlockApply(_input: BeforeBlockApplyContext): Promise<void> {
@@ -94,6 +94,20 @@ export class CanvasModule extends BaseModule {
                     blockHeight: block.header.height,
                     pixel: pixel,
                 });
+            }
+
+            if (transaction.moduleID === CanvasModule.MODULE_ID &&
+                transaction.assetID === CreateCanvasAsset.ASSET_ID)
+            {
+                const canvas = codec.decode<CreateCanvasPayload>(createCanvasSchema, transaction.asset);
+                this._channel.publish("canvas:created", canvas);
+            }
+
+            if (transaction.moduleID === CanvasModule.MODULE_ID &&
+                transaction.assetID === ChangeCanvasAsset.ASSET_ID)
+            {
+                const canvas = codec.decode<ChangeCanvasPayload>(changeCanvasSchema, transaction.asset);
+                this._channel.publish("canvas:changed", canvas);
             }
         }
 

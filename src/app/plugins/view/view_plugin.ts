@@ -182,7 +182,7 @@ export class ViewPlugin extends BasePlugin {
 
             if (changes.coords.length !== 0 && changes.colours.length !== 0)
             {
-                channel.publish("viewChanged", changes);
+                channel.publish("view:viewChanged", changes);
             }
         });
     }
@@ -315,7 +315,7 @@ export class ViewPlugin extends BasePlugin {
         const modified = (current & (0xF0 >> offset)) | (colour << offset);
         this.views[canvasId].buffer.set([modified], index);
         this.views[canvasId].view = null;
-        return current;
+        return (current >> offset) & 0x0F;
     }
 
     private static deserialiseCoords(coords: Uint8Array): number[] {

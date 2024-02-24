@@ -99,15 +99,21 @@ export class CanvasModule extends BaseModule {
             if (transaction.moduleID === CanvasModule.MODULE_ID &&
                 transaction.assetID === CreateCanvasAsset.ASSET_ID)
             {
-                const canvas = codec.decode<CreateCanvasPayload>(createCanvasSchema, transaction.asset);
-                this._channel.publish("canvas:created", canvas);
+                const canvasId = codec.decode<CreateCanvasPayload>(createCanvasSchema, transaction.asset).canvasId;
+                const canvasBuffer = await stateStore.chain.get(serialiseCanvasId(canvasId));
+                assert(canvasBuffer !== undefined);
+                const canvas = codec.decode<CanvasPayload>(canvasSchema, canvasBuffer);
+                this._channel.publish("canvas:created", this.convertResponse(canvasId, canvas));
             }
 
             if (transaction.moduleID === CanvasModule.MODULE_ID &&
                 transaction.assetID === ChangeCanvasAsset.ASSET_ID)
             {
-                const canvas = codec.decode<ChangeCanvasPayload>(changeCanvasSchema, transaction.asset);
-                this._channel.publish("canvas:changed", canvas);
+                const canvasId = codec.decode<ChangeCanvasPayload>(changeCanvasSchema, transaction.asset).canvasId;
+                const canvasBuffer = await stateStore.chain.get(serialiseCanvasId(canvasId));
+                assert(canvasBuffer !== undefined);
+                const canvas = codec.decode<CanvasPayload>(canvasSchema, canvasBuffer);
+                this._channel.publish("canvas:changed", this.convertResponse(canvasId, canvas));
             }
         }
 
@@ -173,8 +179,7 @@ export class CanvasModule extends BaseModule {
     }
 
     private async getCanvas(params: CanvasId): Promise<CanvasResponse|null> {
-        const canvasId = serialiseCanvasId(Number(params.canvasId));
-        const canvasBuffer = await this._dataAccess.getChainState(canvasId);
+        const canvasBuffer = await this._dataAccess.getChainState(serialiseCanvasId(params.canvasId));
 
         if (canvasBuffer === undefined)
         {
@@ -184,6 +189,7 @@ export class CanvasModule extends BaseModule {
         const canvas = codec.decode<CanvasPayload>(canvasSchema, canvasBuffer);
         return {
             ...canvas,
+            canvasId: params.canvasId,
             ownerId: canvas.ownerId.toString("hex"),
             costPerPixel: Number(canvas.costPerPixel),
             startBlockHeight: Number(canvas.startBlockHeight),
@@ -247,5 +253,17 @@ export class CanvasModule extends BaseModule {
 
         const admin = codec.decode<AddressPayload>(addressSchema, adminBuffer);
         return admin.address;
+    }
+
+    private convertResponse(canvasId: number, canvas: CanvasPayload): CanvasResponse {
+        return {
+            ...canvas,
+            canvasId: canvasId,
+            ownerId: canvas.ownerId.toString("hex"),
+            costPerPixel: Number(canvas.costPerPixel),
+            startBlockHeight: Number(canvas.startBlockHeight),
+            endBlockHeight: Number(canvas.endBlockHeight),
+            colourPalette: canvas.colourPalette.toString("hex"),
+        };
     }
 }

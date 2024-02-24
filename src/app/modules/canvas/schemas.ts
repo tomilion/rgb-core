@@ -201,6 +201,7 @@ export enum AccountType {
 }
 
 export interface CanvasResponse {
+    canvasId: number;
     ownerId: string;
     costPerPixel: number;
     startBlockHeight: number;

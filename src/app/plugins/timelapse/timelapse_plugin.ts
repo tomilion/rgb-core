@@ -1,6 +1,6 @@
 import { strict as assert } from 'assert';
 import Jimp from "jimp";
-import { cryptography, BaseChannel, EventsDefinition, ActionsDefinition, SchemaWithDefault, BasePlugin, PluginInfo } from "lisk-sdk";
+import { ActionsDefinition, BaseChannel, BasePlugin, cryptography, EventsDefinition, PluginInfo, SchemaWithDefault } from "lisk-sdk";
 import { PluginOptionsWithAppConfig } from "lisk-framework/dist-node/types";
 import { ActivePayload, CanvasId, CanvasResponse, ChangeCanvasPayload, CompletePayload, CreateCanvasPayload, DrawPixelPayloadJSON } from "../../modules/canvas/schemas";
 import { DrawPixelAsset } from "../../modules/canvas/assets/draw_pixel_asset";
@@ -79,7 +79,6 @@ export class TimelapsePlugin extends BasePlugin<Config> {
         this.subscribeAppBlockNew(channel, mysql);
         this.subscribeCanvasCreated(channel, mysql);
         this.subscribeCanvasChanged(channel, mysql);
-        this.subscribeCanvasStarted(channel, mysql);
     }
 
     public async unload(): Promise<void> { }
@@ -91,7 +90,8 @@ export class TimelapsePlugin extends BasePlugin<Config> {
             const pending = await channel.invoke<ActivePayload>("canvas:getPendingCanvases");
 
             for (const canvasId of pending.canvasIds) {
-                await this.initialiseTimelapse(canvasId, channel, mysql);
+                const canvas = await this.queryCanvas(canvasId, channel);
+                await this.initialiseTimelapse(canvas, mysql);
             }
 
             let min: number|null = null;
@@ -101,7 +101,8 @@ export class TimelapsePlugin extends BasePlugin<Config> {
             const complete = await channel.invoke<CompletePayload>("canvas:getCompleteCanvases");
 
             for (const canvasId of [...active.canvasIds, ...complete.canvasIds]) {
-                await this.initialiseTimelapse(canvasId, channel, mysql);
+                const canvas = await this.queryCanvas(canvasId, channel);
+                await this.initialiseTimelapse(canvas, mysql);
                 const timelapse = this.timelapses[canvasId];
                 min = Math.min(min ?? timelapse.startBlockHeight, timelapse.startBlockHeight);
                 max = Math.max(max ?? timelapse.endBlockHeight, timelapse.endBlockHeight);
@@ -138,48 +139,24 @@ export class TimelapsePlugin extends BasePlugin<Config> {
 
     private subscribeCanvasCreated(channel: BaseChannel, mysql: MysqlConnection): void {
         channel.subscribe("canvas:created", async (data?: Record<string, unknown>) => {
-            const canvasId = data as CreateCanvasPayload;
-            await this.initialiseTimelapse(canvasId.canvasId, channel, mysql);
+            const canvas = data as CanvasResponse;
+            await this.initialiseTimelapse(canvas, mysql);
         });
     }
 
     private subscribeCanvasChanged(channel: BaseChannel, mysql: MysqlConnection): void {
         channel.subscribe("canvas:changed", async (data?: Record<string, unknown>) => {
-            const canvasId = data as ChangeCanvasPayload;
-            await this.initialiseTimelapse(canvasId.canvasId, channel, mysql);
+            const canvas = data as CanvasResponse;
+            await this.initialiseTimelapse(canvas, mysql);
         });
     }
 
-    private subscribeCanvasStarted(channel: BaseChannel, mysql: MysqlConnection): void {
-        channel.subscribe("canvas:started", async (data?: Record<string, unknown>) => {
-            const canvasId = data as CanvasId;
-            await this.initialiseTimelapse(canvasId.canvasId, channel, mysql);
-            const timelapse = this.timelapses[canvasId.canvasId];
-
-            for (let height = timelapse.startBlockHeight; height <= timelapse.endBlockHeight; height++) {
-                const serialisedBlock = await channel.invoke<string>("app:getBlockByHeight", { height: height }).catch(() => {});
-
-                if (serialisedBlock === undefined) {
-                    break;
-                }
-
-                await this.createTransactions(serialisedBlock, mysql);
-            }
-        });
-    }
-
-    private async initialiseTimelapse(canvasId: number, channel: BaseChannel, mysql: MysqlConnection): Promise<void> {
-        const canvas = await channel.invoke<CanvasResponse|null>("canvas:getCanvas", { canvasId: canvasId });
-
-        if (canvas === null) {
-            throw new Error(`Failed to query canvas details (${canvasId})`);
-        }
-
+    private async initialiseTimelapse(canvas: CanvasResponse, mysql: MysqlConnection): Promise<void> {
         // TODO: optimise chunk size depending on block height (starting with max 30 chunks)
-        const chunkSize = Math.ceil((canvas.endBlockHeight - canvas.startBlockHeight) / 30);
+        const chunkSize = Math.ceil(Math.max(canvas.endBlockHeight - canvas.startBlockHeight, 30) / 30);
         const colourPalette = Buffer.from(canvas.colourPalette, "hex");
         const summaryId = await this.getOrCreateTimelapseSummary(
-            canvasId,
+            canvas.canvasId,
             canvas.startBlockHeight,
             canvas.endBlockHeight,
             chunkSize,
@@ -189,7 +166,7 @@ export class TimelapsePlugin extends BasePlugin<Config> {
             canvas.label,
             mysql
         );
-        this.timelapses[canvasId] = {
+        this.timelapses[canvas.canvasId] = {
             timelapseId: summaryId,
             startBlockHeight: canvas.startBlockHeight,
             endBlockHeight: canvas.endBlockHeight,
@@ -456,6 +433,16 @@ export class TimelapsePlugin extends BasePlugin<Config> {
         const modified = (current & (0xF0 >> offset)) | (colour << offset);
         buffer.set([modified], index);
         return buffer;
+    }
+
+    private async queryCanvas(canvasId: number, channel: BaseChannel): Promise<CanvasResponse> {
+        const canvas = await channel.invoke<CanvasResponse|null>("canvas:getCanvas", { canvasId: canvasId });
+
+        if (canvas === null) {
+            throw new Error(`Failed to query canvas details (${canvasId})`);
+        }
+
+        return canvas;
     }
 
     private static deserialiseColourPalette(colourPalette: Buffer): number[][] {
